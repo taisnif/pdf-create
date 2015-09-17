@@ -2,8 +2,9 @@ branches:
   except:
     - gh-pages
 language: perl
+sudo: false
 perl:
-  - "5.22"
+#  - "5.22" # not supported by Travis?
   - "5.20"
 #  - "5.18"  # IO::Tty is missing on the Travis server or cannot be installed?
   - "5.16"
