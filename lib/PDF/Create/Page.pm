@@ -439,6 +439,8 @@ sub printnl
 	my $x    = shift;
 	my $y    = shift;
 
+	$self->{'current_font'} = $font if defined $font;
+	croak 'No font found !' if !defined $self->{'current_font'};
 	# set up current_x/y used in stringml
 	$self->{'current_y'} = $y if defined $y;
 	carp 'No starting position given, using 800' if !defined $self->{'current_y'};
@@ -447,8 +449,6 @@ sub printnl
 	$self->{'current_x'}    = 20    if !defined $self->{'current_x'};
 	$self->{'current_size'} = $size if defined $size;
 	$self->{'current_size'} = 12    if !defined $self->{'current_size'};
-	$self->{'current_font'} = $font if defined $font;
-	croak 'No font found !' if !defined $self->{'current_font'};
 
 	# print the line(s)
 	my $n = 0;
