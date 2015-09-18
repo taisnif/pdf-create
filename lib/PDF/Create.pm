@@ -575,6 +575,13 @@ sub new_page
 	my $self = shift;
 
 	my %params = @_;
+
+        my @valid_keys = (qw/Parent Resources MediaBox CropBox ArtBox TrimBox BleedBox Rotate/);
+        foreach my $key (keys %params) {
+            croak "PDF::Create.pm - new_page(): Received invalid key [$key]"
+                unless (grep /^$key$/, @valid_keys);
+        }
+
 	my $parent = $params{'Parent'} || $self->{'pages'};
 	my $name   = "Page " . ++$self->{'page_count'};
 	my $page   = $parent->add( $self->reserve( $name, "Page" ), $name );
@@ -920,6 +927,22 @@ sub font
 	my $self = shift;
 
 	my %params = @_;
+
+        my %valid_keys = (
+            'Subtype'  => [qw/Type0 Type1 Type3 TrueType/],
+            'Encoding' => [qw/MacRomanEncoding MacExpertEncoding WinAnsiEncoding/],
+            'BaseFont' => [qw/Courier Courier-Bold Courier-BoldOblique Courier-Oblique
+                              Helvetica Helvetica-Bold Helvetica-BoldOblique Helvetica-Oblique
+                              Times-Roman Times-Bold Times-Italic Times-BoldItalic/],
+        );
+        foreach my $key (keys %params) {
+            croak "PDF::Create.pm - font(): Received invalid key [$key]"
+                unless (exists $valid_keys{$key});
+            my $value = $params{$key};
+            croak "PDF::Create.pm - font(): Received invalid value [$value] for key [$key]"
+                if (defined $value && !grep /^$value$/, @{$valid_keys{$key}});
+        }
+
 	my $num    = 1 + scalar keys %{ $self->{'fonts'} };
 	$self->{'fonts'}{$num} = { 'Subtype'  => $self->name( $params{'Subtype'}  || 'Type1' ),
 							   'Encoding' => $self->name( $params{'Encoding'} || 'WinAnsiEncoding' ),
@@ -1277,7 +1300,7 @@ Example:
   $pdf->new_outline('Title' => 'Item 2');
 
 
-=item * new_page([parameters])
+=item * new_page(%parameters)
 
 Add a page to the document using the given parameters. C<new_page> must
 be called first to initialize a root page, used as model for further pages.
@@ -1343,7 +1366,7 @@ ledger, tabloid, legal, executive and 36x36. Default is a4.
 
   my $root = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
 
-=item * font([parameters])
+=item * font(%parameters)
 
 Prepare a font using the given arguments. This font will be added
 to the document only if it is used at least once before the close method
