@@ -576,10 +576,10 @@ sub new_page
 
 	my %params = @_;
 
-        my @valid_keys = (qw/Parent Resources MediaBox CropBox ArtBox TrimBox BleedBox Rotate/);
+        my %valid_new_page_parameters = map { $_ => 1 } (qw/Parent Resources MediaBox CropBox ArtBox TrimBox BleedBox Rotate/);
         foreach my $key (keys %params) {
             croak "PDF::Create.pm - new_page(): Received invalid key [$key]"
-                unless (grep /^$key$/, @valid_keys);
+                unless (exists $valid_new_page_parameters{$key});
         }
 
 	my $parent = $params{'Parent'} || $self->{'pages'};
@@ -928,19 +928,19 @@ sub font
 
 	my %params = @_;
 
-        my %valid_keys = (
-            'Subtype'  => [qw/Type0 Type1 Type3 TrueType/],
-            'Encoding' => [qw/MacRomanEncoding MacExpertEncoding WinAnsiEncoding/],
-            'BaseFont' => [qw/Courier Courier-Bold Courier-BoldOblique Courier-Oblique
-                              Helvetica Helvetica-Bold Helvetica-BoldOblique Helvetica-Oblique
-                              Times-Roman Times-Bold Times-Italic Times-BoldItalic/],
+        my %valid_font_parameters = (
+            'Subtype'  => { map { $_ => 1 } qw/Type0 Type1 Type3 TrueType/ },
+            'Encoding' => { map { $_ => 1 } qw/MacRomanEncoding MacExpertEncoding WinAnsiEncoding/ },
+            'BaseFont' => { map { $_ => 1 } qw/Courier Courier-Bold Courier-BoldOblique Courier-Oblique
+                                               Helvetica Helvetica-Bold Helvetica-BoldOblique Helvetica-Oblique
+                                               Times-Roman Times-Bold Times-Italic Times-BoldItalic/ },
         );
         foreach my $key (keys %params) {
             croak "PDF::Create.pm - font(): Received invalid key [$key]"
-                unless (exists $valid_keys{$key});
+                unless (exists $valid_font_parameters{$key});
             my $value = $params{$key};
             croak "PDF::Create.pm - font(): Received invalid value [$value] for key [$key]"
-                if (defined $value && !grep /^$value$/, @{$valid_keys{$key}});
+                if (defined $value && !(exists $valid_font_parameters{$key}->{$value}));
         }
 
 	my $num    = 1 + scalar keys %{ $self->{'fonts'} };
