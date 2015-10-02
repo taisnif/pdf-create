@@ -1,3 +1,7 @@
+1.11 2015.10.02
+    Test cleanups.  (Mohammad S Anwar)
+    Input validation. (Mohammad S Anwar)
+
 1.10 2014.08.22
     Fix test that used to use CGI.pm
 
