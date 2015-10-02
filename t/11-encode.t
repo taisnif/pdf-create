@@ -1,5 +1,5 @@
-#!/usr/bin/perl -w
-use strict;
+#!/usr/bin/perl
+use strict; use warnings;
 use PDF::Create;
 use Test::More;
 

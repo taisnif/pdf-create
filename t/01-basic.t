@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 # PDF::Create - Test Script
 #
@@ -12,8 +12,7 @@
 # - comment
 #
 
-BEGIN { unshift @INC, "lib", "../lib" }
-use strict;
+use strict; use warnings;
 use PDF::Create;
 use Test::More tests => 11;
 

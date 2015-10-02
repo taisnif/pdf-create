@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 # PDF::Create - Test Script
 #
@@ -11,8 +11,7 @@
 # This has not much to do with testing, but I like it, so it remains :-).
 #
 
-BEGIN { unshift @INC, "lib", "../lib" }
-use strict;
+use strict; use warnings;
 use PDF::Create;
 use Test::More tests => 1;
 

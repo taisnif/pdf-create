@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 # PDF::Create - Test Script
 #
@@ -11,8 +11,7 @@
 # - JPEG/GIF
 #
 
-BEGIN { unshift @INC, "lib", "../lib" }
-use strict;
+use strict; use warnings;
 use PDF::Create;
 use File::Basename;
 use Test::More tests => 9;

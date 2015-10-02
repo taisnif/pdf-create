@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 # PDF::Create - Test Script
 #
@@ -10,8 +10,7 @@
 # - Link
 #
 
-BEGIN { unshift @INC, "lib", "../lib" }
-use strict;
+use strict; use warnings;
 use PDF::Create;
 use Test::More tests => 13;
 # we want the resulting pdf file to have the same name as the test
