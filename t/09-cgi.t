@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #
 # 09-cgi.t
 #
@@ -7,8 +7,7 @@
 # run the cgi-test and check the resulting output
 #
 
-BEGIN { unshift @INC, "lib", "../lib" }
-use strict;
+use strict; use warnings;
 use File::Basename qw(dirname);
 use File::Spec;
 use PDF::Create;
