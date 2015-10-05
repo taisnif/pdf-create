@@ -71,4 +71,23 @@ like($@, qr/Received invalid value/);
 
 ok(!$pdf->close(), "Close PDF");
 
+my %params = ('filenam' => "$pdfname",
+              'Versin'  => 1.3,
+              'PageMod' => 'UseOutlines',
+              'Autho'   => 'Test Author',
+              'Titl'    => 'Test Title',
+              'Debg'    => 0,
+              'Creatr'  => 'Test Creator',
+              'Keyword' => 'Test Keywords');
+foreach (keys %params) {
+    eval { PDF::Create->new($_ => $params{$_}) };
+    like($@, qr/Invalid constructor key '$_' received/);
+}
+
+eval { PDF::Create->new('PageMode' => 'UseOutline') };
+like($@, qr/Invalid value for key 'PageMode' received 'UseOutline'/);
+
+eval { PDF::Create->new('Debug' => 'abc') };
+like($@, qr/Invalid value for key 'Debug' received 'abc'/);
+
 done_testing();

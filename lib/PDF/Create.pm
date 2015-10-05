@@ -35,6 +35,38 @@ sub new
 	my $this   = shift;
 	my %params = @_;
 
+        # validate constructor keys
+        my %valid_constructor_keys = ('fh'       => 1,
+                                      'filename' => 1,
+                                      'Version'  => 1,
+                                      'PageMode' => 1,
+                                      'Author'   => 1,
+                                      'Creator'  => 1,
+                                      'Title'    => 1,
+                                      'Subject'  => 1,
+                                      'Keywords' => 1,
+                                      'Debug'    => 1);
+        foreach (keys %params) {
+            croak "Invalid constructor key '$_' received." 
+                unless (exists $valid_constructor_keys{$_});
+        }
+
+	if (exists $params{PageMode} && defined $params{PageMode}) {
+	    # validate PageMode key value
+            my %valid_page_mode_values = ('UseNone'     => 1,
+                                          'UseOutlines' => 1,
+                                          'UseThumbs'   => 1,
+                                          'FullScreen'  => 1);
+            croak "Invalid value for key 'PageMode' received '". $params{PageMode} . "'" 
+                unless (exists $valid_page_mode_values{$params{PageMode}});
+        }
+
+        if (exists $params{Debug} && defined $params{Debug}) {
+            # validate Debug key value
+            croak "Invalid value for key 'Debug' received '". $params{Debug} . "'"
+               unless ($params{Debug} =~ /^[1|0]$/);
+        }
+
 	my $class = ref($this) || $this;
 	my $self = {};
 	bless $self, $class;
@@ -1232,15 +1264,27 @@ If the document was converted into a PDF document
   from another form, this is the name of the application that
   created the document.
 
-- 'Title' the title of the document
+=item 'Title' 
 
-- 'Subject' the subject of the document
+the title of the document
 
-- 'Keywords' keywords associated with the document
+=item 'Subject' 
 
-- 'CreationDate' the date the document was created. This is passed
-  as an anonymous array in the same format as localtime returns.
-  (ie. a struct tm).
+the subject of the document
+
+=item 'Keywords' 
+
+keywords associated with the document
+
+=item 'CreationDate' 
+
+the date the document was created. This is passed
+as an anonymous array in the same format as localtime returns.
+(ie. a struct tm).
+
+=item 'Debug'
+
+the debug switch, defaults to 0. The other possible value is 1.
 
 =back
 
