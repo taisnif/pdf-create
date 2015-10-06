@@ -69,6 +69,16 @@ eval {
 };
 like($@, qr/Received invalid value/);
 
+eval { $pdf->get_page_size('AA') };
+like($@, qr/Invalid page size 'AA' received/);
+
+foreach (qw/A0 A1 A2 A3 A4 A4L A5 A6
+            LETTER BROADSHEET LEDGER TABLOID
+            LEGAL EXECUTIVE 36X36/) {
+    eval { $pdf->get_page_size($_) };
+    is($@, '');
+}
+
 ok(!$pdf->close(), "Close PDF");
 
 my %params = ('filenam' => "$pdfname",
