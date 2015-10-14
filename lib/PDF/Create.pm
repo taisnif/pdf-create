@@ -576,7 +576,7 @@ sub new_outline
 sub get_page_size
 {
 	my $self = shift;
-	my $name = lc(shift);
+	my $name = shift;
 
 	my %pagesizes = ( 'A0'         => [ 0, 0, 2380, 3368 ],
 					  'A1'         => [ 0, 0, 1684, 2380 ],
@@ -594,12 +594,16 @@ sub get_page_size
 					  'EXECUTIVE'  => [ 0, 0, 522,  756 ],
 					  '36X36'      => [ 0, 0, 2592, 2592 ],
 					);
+        if (defined $name) {
+            $name = uc($name);
+            # validate page size
+            croak "Invalid page size name '$name' received." unless (exists $pagesizes{$name});
+        }
+        else {
+            $name = 'A4';
+        }
 
-	if ( !$pagesizes{ uc($name) } ) {
-		$name = "A4";
-	}
-
-	$pagesizes{ uc($name) };
+	return $pagesizes{$name};
 }
 
 sub new_page
@@ -1404,8 +1408,8 @@ is rotated.
 =item * get_page_size(<pagesize>)
 
 Returns the size of standard paper sizes to use for MediaBox-parameter
-of C<new_page>. C<get_page_size> has one required parameter to 
-specify the paper name. Possible values are a0-a6, letter, broadsheet,
+of C<new_page>. C<get_page_size> has one optional parameter to 
+specify the paper name. Possible values are a0-a6, a4l, letter, broadsheet,
 ledger, tabloid, legal, executive and 36x36. Default is a4.
 
   my $root = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
