@@ -26,8 +26,8 @@ WriteMakefile(
 		resources => {
 			repository => {
 				type => 'git',
-				url  => 'http://github.com/szabgab/pdf-create.git',
-				web  => 'http://github.com/szabgab/pdf-create',
+				url  => 'http://github.com/manwar/pdf-create.git',
+				web  => 'http://github.com/manwar/pdf-create',
 			}
 	}},
 );
