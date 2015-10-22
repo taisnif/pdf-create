@@ -1,3 +1,6 @@
+1.13 2015.10.22
+    Fixed the distribution as earlier v1.12 didn't have any code (MANWAR).
+
 1.12 2015.10.22
     Updated repository link in the Makefile.PL script (MANWAR).
 
