@@ -11,7 +11,7 @@
 #
 # Please do not use any of the methods here directly. You will be
 # punished with your application no longer working after an upgrade !
-# 
+#
 
 package PDF::Create::Outline;
 use strict;
@@ -22,7 +22,7 @@ use FileHandle;
 use Data::Dumper;
 use Scalar::Util qw(weaken);
 
-our $VERSION = '1.13';
+our $VERSION = '1.14';
 our $DEBUG   = 0;
 
 sub new

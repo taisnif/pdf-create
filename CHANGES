@@ -1,3 +1,8 @@
+1.14 2015.10.23
+    Added section REPOSITORY, LICENSE to the pod document.
+    Added standard pod syntax testing script t/pod.t
+    Added MANIFEST file.
+
 1.13 2015.10.22
     Fixed the distribution as earlier v1.12 didn't have any code (MANWAR).
 
@@ -24,7 +29,7 @@
 1.07 2013.12.10
 
     New maintainer SZABGAB
-    Tried to reconstruct entries in the CHANGES file 
+    Tried to reconstruct entries in the CHANGES file
     Some more test case
     Code clean-up (remove indirect calls)
     Remove Build.PL

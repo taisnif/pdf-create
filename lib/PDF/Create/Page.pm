@@ -23,7 +23,7 @@ use Data::Dumper;
 use POSIX qw(setlocale LC_NUMERIC);
 use Scalar::Util qw(weaken);
 
-our $VERSION = '1.13';
+our $VERSION = '1.14';
 our $DEBUG   = 0;
 
 my $font_widths = &init_widths;
@@ -419,10 +419,10 @@ sub string_width
 	my $string = shift;
 
 	croak 'No string given' unless defined $string;
-    
+
 	my $fname = $self->{'pdf'}{'fonts'}{$font}{'BaseFont'}[1];
 	croak('Unknown font: ' . $fname) unless defined $$font_widths{$fname}[ ord "M" ];
-	
+
 	my $w     = 0;
 	for my $c ( split '', $string ) {
 		$w += $$font_widths{$fname}[ ord $c ];
@@ -523,7 +523,7 @@ sub image
 
 	# Switch to the 'C' locale, we need printf floats with a '.', not a ','
     setlocale(LC_NUMERIC,$savedLocale);
-	
+
 }
 
 #######################################################################
