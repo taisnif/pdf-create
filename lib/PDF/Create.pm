@@ -1,6 +1,6 @@
 package PDF::Create;
 
-our $VERSION = '1.14';
+our $VERSION = '1.15';
 
 =head1 NAME
 
@@ -8,7 +8,7 @@ PDF::Create - Create PDF files.
 
 =head1 VERSION
 
-Version 1.14
+Version 1.15
 
 =cut
 
@@ -52,138 +52,95 @@ modules to gain more features at the expense of a steeper learning curve.
 
 Example PDF creation with C<PDF::Create>:
 
-  use strict; use warnings;
-  use PDF::Create;
+    use strict; use warnings;
+    use PDF::Create;
 
-  my $pdf = PDF::Create->new(
-      'filename'     => 'sample.pdf',
-      'Author'       => 'John Doe',
-      'Title'        => 'Sample PDF',
-      'CreationDate' => [ localtime ]
-  );
+    my $pdf = PDF::Create->new(
+        'filename'     => 'sample.pdf',
+        'Author'       => 'John Doe',
+        'Title'        => 'Sample PDF',
+        'CreationDate' => [ localtime ]
+    );
 
-  # add a A4 sized page
-  my $a4 = $pdf->new_page('MediaBox' => $pdf->get_page_size('A4'));
+    # add a A4 sized page
+    my $a4 = $pdf->new_page('MediaBox' => $pdf->get_page_size('A4'));
 
-  # Add a page which inherits its attributes from $a4
-  my $page = $a4->new_page;
+    # Add a page which inherits its attributes from $a4
+    my $page = $a4->new_page;
 
-  # Prepare a font
-  my $f1 = $pdf->font('BaseFont' => 'Helvetica');
+    # Prepare a font
+    my $f1 = $pdf->font('BaseFont' => 'Helvetica');
 
-  # Prepare a Table of Content
-  my $toc = $pdf->new_outline('Title' => 'Title Page', 'Destination' => $page);
+    # Prepare a Table of Content
+    my $toc = $pdf->new_outline('Title' => 'Title Page', 'Destination' => $page);
 
-  # Write some text
-  $page->stringc($f1, 40, 306, 426, "PDF::Create");
-  $page->stringc($f1, 20, 306, 396, "version $PDF::Create::VERSION");
-  $page->stringc($f1, 20, 306, 300, 'by John Doe <john.doe@example.com>');
+    # Write some text
+    $page->stringc($f1, 40, 306, 426, "PDF::Create");
+    $page->stringc($f1, 20, 306, 396, "version $PDF::Create::VERSION");
+    $page->stringc($f1, 20, 306, 300, 'by John Doe <john.doe@example.com>');
 
-  # Add another page
-  my $page2 = $a4->new_page;
+    # Add another page
+    my $page2 = $a4->new_page;
 
-  # Draw some lines
-  $page2->line(0, 0, 612, 792);
-  $page2->line(0, 792, 612, 0);
+    # Draw some lines
+    $page2->line(0, 0, 612, 792);
+    $page2->line(0, 792, 612, 0);
 
-  $toc->new_outline('Title' => 'Second Page', 'Destination' => $page2);
+    $toc->new_outline('Title' => 'Second Page', 'Destination' => $page2);
 
-  # Close the file and write the PDF
-  $pdf->close;
+    # Close the file and write the PDF
+    $pdf->close;
 
 =head1 CONSTRUCTOR
 
-The method C<new(%parameters)> create a new pdf structure for your PDF.It returns
-an object handle which can be used to add more stuff to the PDF.
+The method C<new(%params)> create a new pdf structure for your PDF. It returns an
+object handle which can be used to add more stuff to the PDF. The  parameter keys
+to the constructor are detailed as below:
+
+    +--------------+------------------------------------------------------------+
+    | Key          | Description                                                |
+    +--------------+------------------------------------------------------------+
+    |              |                                                            |
+    | filename     | Destination file that will contain resulting PDF or '-' for|
+    |              | stdout.                                                    |
+    |              |                                                            |
+    | fh           | Already opened filehandle that will contain resulting PDF. |
+    |              |                                                            |
+    | Version      | PDF Version to claim, can be 1.0 to 1.3 (default: 1.       |
+    |              |                                                            |
+    | PageMode     | How the document should appear when opened.Possible values |
+    |              | UseNone (Default), UseOutlines, UseThumbs and FullScreen   |
+    |              |                                                            |
+    | Author       | The name of the person who created this document.          |
+    |              |                                                            |
+    | Creator      | If the document was converted into a PDF document from     |
+    |              | another form, this is the name of the application that     |
+    |              | created the document.                                      |
+    |              |                                                            |
+    | Title        | The title of the document.                                 |
+    |              |                                                            |
+    | Subject      | The subject of the document.                               |
+    |              |                                                            |
+    | Keywords     | Keywords associated with the document.                     |
+    |              |                                                            |
+    | CreationDate | The date the document was created.This is passed as an     |
+    |              | anonymous array in the same format as localtime returns.   |
+    |              |                                                            |
+    | Debug        | The debug switch, defaults to 0. The other possible value  |
+    |              | is 1.                                                      |
+    |              |                                                            |
+    +--------------+------------------------------------------------------------+
 
 Example:
 
-  my $pdf = PDF::Create->new(
-    'filename'     => 'mypdf.pdf',
-    'Version'      => 1.2,
-    'PageMode'     => 'UseOutlines',
-    'Author'       => 'John Doe',
-    'Title'        => 'My title',
-    'CreationDate' => [ localtime ]
-  );
-
-PARAMETERS
-
-The parameter keys to the constructor are detailed as below:
-
-=over 4
-
-=item C<filename>
-
-Destination file that will contain the resulting PDF or '-' for stdout.
-
-=item C<fh>
-
-An already opened filehandle that will contain the resulting PDF.
-
-=item C<Version>
-
-PDF Version to claim, can be 1.0 to 1.3 (default: 1.2)
-
-=item C<PageMode>
-
-How the document should appear when opened.
-
-Allowed values are
-
-=over 4
-
-=item UseNone
-
-  Open document with neither outline nor thumbnails visible.This is the default
-  value.
-
-=item UseOutlines
-
-  Open document with outline visible.
-
-=item UseThumbs
-
-  Open document with thumbnails visible.
-
-=item FullScreen
-
-  Open document in  full-screen mode. In  full-screen mode, there is no menu bar,
-  window controls, nor any other window present.
-
-=back
-
-=item C<Author>
-
-The name of the person who created this document.
-
-=item C<Creator>
-
-If the document was converted into a PDF document from another form, this  is the
-name of the application that created the document.
-
-=item C<Title>
-
-The title of the document.
-
-=item C<Subject>
-
-The subject of the document.
-
-=item C<Keywords>
-
-Keywords associated with the document.
-
-=item C<CreationDate>
-
-The date the document was created.This is passed as an anonymous array in the same
-format as localtime returns. (ie. a struct tm).
-
-=item C<Debug>
-
-The debug switch, defaults to 0. The other possible value is 1.
-
-=back
+    my $pdf = PDF::Create->new(
+        'filename'     => 'sample.pdf',
+        'Version'      => 1.2,
+        'PageMode'     => 'UseOutlines',
+        'Author'       => 'John Doe',
+        'Title'        => 'My Title',
+        'CreationDate' => [ localtime ]
+    );
 
 If you are writing a CGI you can send your PDF on the fly to stdout / directly to
 the browser using '-' as filename.
@@ -208,16 +165,17 @@ sub new {
 
     # validate constructor keys
     my %valid_constructor_keys = (
-        'fh'       => 1,
-        'filename' => 1,
-        'Version'  => 1,
-        'PageMode' => 1,
-        'Author'   => 1,
-        'Creator'  => 1,
-        'Title'    => 1,
-        'Subject'  => 1,
-        'Keywords' => 1,
-        'Debug'    => 1
+        'fh'           => 1,
+        'filename'     => 1,
+        'Version'      => 1,
+        'PageMode'     => 1,
+        'Author'       => 1,
+        'Creator'      => 1,
+        'Title'        => 1,
+        'Subject'      => 1,
+        'Keywords'     => 1,
+        'Debug'        => 1,
+        'CreationDate' => 1,
     );
     foreach (keys %params) {
         croak "Invalid constructor key '$_' received."
@@ -330,69 +288,6 @@ sub close {
     $self->{'data'};
 }
 
-=head2 debug($level, $message)
-
-Helper package function for debugging.Prints the passed message if debug level is
-sufficiently high.
-
-=cut
-
-sub debug {
-    my ($level, $msg) = @_;
-
-    return unless ( $DEBUG >= $level );
-    my $s = scalar @_ ? sprintf $msg, @_ : $msg;
-
-    warn "DEBUG ($level): $s\n";
-}
-
-=head2 version($number)
-
-Set/Return the PDF version
-
-=cut
-
-sub version {
-    my ($self, $v) = @_;
-
-    if (defined $v) {
-        # TODO: should test version (1.0 to 1.3)
-        $self->{'version'} = $v;
-    }
-    $self->{'version'};
-}
-
-=head2 add(@data)
-
-Add some data to the current PDF structure.
-
-=cut
-
-sub add {
-    my $self = shift;
-    my $data = join '', @_;
-
-    $self->{'size'} += length $data;
-    if ( defined $self->{'fh'} ) {
-        my $fh = $self->{'fh'};
-        print $fh $data;
-    } else {
-        $self->{'data'} .= $data;
-    }
-}
-
-=head2 position()
-
-Get the current position in the PDF.
-
-=cut
-
-sub position {
-    my ($self) = @_;
-
-    $self->{'size'};
-}
-
 =head2 reserve($name, $type)
 
 Reserve the next object number for the given object type.
@@ -422,18 +317,6 @@ sub reserve
     [ $self->{'object_number'}, $self->{'generation_number'} ];
 }
 
-=head2 add_version()
-
-=cut
-
-sub add_version {
-    my ($self) = @_;
-
-    debug( 2, "add_version(): $self->{'version'}" );
-    $self->add( "%PDF-" . $self->{'version'} );
-    $self->cr;
-}
-
 =head2 add_comment($message)
 
 Add comment to the document.The string will show up in the PDF as postscript-stype
@@ -449,315 +332,6 @@ sub add_comment {
     $comment = '' unless defined $comment;
     debug( 2, "add_comment(): $comment" );
     $self->add( "%" . $comment );
-    $self->cr;
-}
-
-=head2 encode($type, $value)
-
-Package method to encode C<$value> of type C<$type>.
-
-=cut
-
-sub encode {
-    my ($type, $val) = @_;
-
-    if ($val) {
-        debug( 4, "encode(): $type $val" );
-    } else {
-        debug( 4, "encode(): $type (no val)" );
-    }
-
-    if (!$type) {
-        cluck "PDF::Create::encode: empty argument, called by ";
-        return 1;
-    }
-
-    ( $type eq 'null' || $type eq 'number' ) && do {
-        1; # do nothing
-    }
-    || $type eq 'cr' && do {
-        $val = "\n";
-    }
-    || $type eq 'boolean' && do {
-        $val =
-            $val eq 'true'  ? $val
-            : $val eq 'false' ? $val
-            : $val eq '0'     ? 'false'
-            :                   'true';
-    }
-    || $type eq 'verbatim' && do {
-        $val = "$val";
-    }
-    || $type eq 'string' && do {
-        $val = '' if not defined $val;
-        # TODO: split it. Quote parentheses.
-        $val = "($val)";
-    }
-    || $type eq 'number' && do {
-        $val = "$val";
-    }
-    || $type eq 'name' && do {
-        $val = '' if not defined $val;
-        $val = "/$val";
-    }
-    || $type eq 'array' && do {
-
-        # array, encode contents individually
-        my $s = '[';
-        for my $v (@$val) {
-            $s .= &encode( $$v[0], $$v[1] ) . " ";
-        }
-        # remove the trailing space
-        chop $s;
-        $val = $s . "]";
-    }
-    || $type eq 'dictionary' && do {
-        my $s = '<<' . &encode('cr');
-        for my $v ( keys %$val ) {
-            $s .= &encode( 'name',            $v ) . " ";
-            $s .= &encode( ${ $$val{$v} }[0], ${ $$val{$v} }[1] );    #  . " ";
-            $s .= &encode('cr');
-        }
-        $val = $s . ">>";
-    }
-    || $type eq 'object' && do {
-        my $s = &encode( 'number', $$val[0] ) . " " . &encode( 'number', $$val[1] ) . " obj";
-        $s .= &encode('cr');
-        $s .= &encode( $$val[2][0], $$val[2][1] );                    #  . " ";
-        $s .= &encode('cr');
-        $val = $s . "endobj";
-    }
-    || $type eq 'ref' && do {
-        my $s = &encode( 'number', $$val[0] ) . " " . &encode( 'number', $$val[1] ) . " R";
-        $val = $s;
-    }
-    || $type eq 'stream' && do {
-        my $data = delete $$val{'Data'};
-        my $s    = '<<' . &encode('cr');
-        for my $v ( keys %$val ) {
-            $s .= &encode( 'name',            $v ) . " ";
-            $s .= &encode( ${ $$val{$v} }[0], ${ $$val{$v} }[1] );    #  . " ";
-            $s .= &encode('cr');
-        }
-        $s .= ">>" . &encode('cr') . "stream" . &encode('cr');
-        $s .= $data . &encode('cr');
-        $val = $s . "endstream" . &encode('cr');
-    }
-    || confess "Error: unknown type '$type'";
-
-    # TODO: add type 'text';
-    $val;
-}
-
-=head2 add_object($value)
-
-=cut
-
-sub add_object {
-    my ($self, $v) = @_;
-
-    my $val = &encode(@$v);
-    $self->add($val);
-    $self->cr;
-    debug( 3, "add_object(): $v -> $val" );
-    [ $$v[1][0], $$v[1][1] ];
-}
-
-=head2 null()
-
-=cut
-
-sub null {
-    my ($self) = @_;;
-
-    [ 'null', 'null' ];
-}
-
-=head2 boolean($value)
-
-=cut
-
-sub boolean {
-    my ($self, $val) = @_;
-
-    [ 'boolean', $val ];
-}
-
-=head2 number($value)
-
-=cut
-
-sub number {
-    my ($self, $val) = @_;;
-
-    [ 'number', $val ];
-}
-
-=head2 name($value)
-
-=cut
-
-sub name {
-    my ($self, $val) = @_;
-
-    [ 'name', $val ];
-}
-
-=head2 string($value)
-
-=cut
-
-sub string {
-    my ($self, $val) = @_;
-
-    [ 'string', $val ];
-}
-
-=head2 verbatim($value)
-
-=cut
-
-sub verbatim {
-    my ($self, $val) = @_;
-
-    [ 'verbatim', $val ];
-}
-
-=head2 array(@value)
-
-=cut
-
-sub array {
-    my $self = shift;
-
-    [ 'array', [@_] ];
-}
-
-=head2 dictionary(@value)
-
-=cut
-
-sub dictionary {
-    my $self = shift;
-
-    [ 'dictionary', {@_} ];
-}
-
-=head2 indirect_obj()
-
-=cut
-
-sub indirect_obj {
-    my $self = shift;
-
-    my ($id, $gen, $type, $name);
-    $name = $_[1];
-    $type = $_[0][1]{'Type'}[1]
-        if defined $_[0][1] && ref $_[0][1] eq 'HASH' && defined $_[0][1]{'Type'};
-
-    if ( defined $name && defined $self->{'reservations'}{$name} ) {
-        ( $id, $gen ) = @{ $self->{'reservations'}{$name} };
-        delete $self->{'reservations'}{$name};
-    } elsif ( defined $type && defined $self->{'reservations'}{$type} ) {
-        ( $id, $gen ) = @{ $self->{'reservations'}{$type} };
-        delete $self->{'reservations'}{$type};
-    } else {
-        $id  = ++$self->{'object_number'};
-        $gen = $self->{'generation_number'};
-    }
-    debug( 3, "indirect_obj(): " . $self->position );
-    push @{ $self->{'crossrefsubsection'}{$gen} }, [ $id, $self->position, 1 ];
-    [ 'object', [ $id, $gen, @_ ] ];
-}
-
-=head2 indirect_ref(@value)
-
-=cut
-
-sub indirect_ref {
-    my $self = shift;
-
-    [ 'ref', [@_] ];
-}
-
-=head2 stream(@value)
-
-=cut
-
-sub stream {
-    my $self = shift;
-
-    [ 'stream', {@_} ];
-}
-
-=head2 add_info(%params)
-
-=cut
-
-sub add_info {
-    my $self = shift;
-
-    debug( 2, "add_info():" );
-    my %params = @_;
-    $params{'Author'}   = $self->{'Author'}   if defined $self->{'Author'};
-    $params{'Creator'}  = $self->{'Creator'}  if defined $self->{'Creator'};
-    $params{'Title'}    = $self->{'Title'}    if defined $self->{'Title'};
-    $params{'Subject'}  = $self->{'Subject'}  if defined $self->{'Subject'};
-    $params{'Keywords'} = $self->{'Keywords'} if defined $self->{'Keywords'};
-    $params{'CreationDate'} = $self->{'CreationDate'}
-    if defined $self->{'CreationDate'};
-
-    $self->{'info'} = $self->reserve('Info');
-    my $content = {
-        'Producer' => $self->string("PDF::Create version $VERSION"),
-        'Type'     => $self->name('Info')
-    };
-    $$content{'Author'} = $self->string( $params{'Author'} )
-        if defined $params{'Author'};
-    $$content{'Creator'} = $self->string( $params{'Creator'} )
-        if defined $params{'Creator'};
-    $$content{'Title'} = $self->string( $params{'Title'} )
-        if defined $params{'Title'};
-    $$content{'Subject'} = $self->string( $params{'Subject'} )
-        if defined $params{'Subject'};
-    $$content{'Keywords'} = $self->string( $params{'Keywords'} )
-        if defined $params{'Keywords'};
-    $$content{'CreationDate'} = $self->string( $params{'CreationDate'} )
-        if defined $params{'CreationDate'};
-
-    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ), 'Info' );
-    $self->cr;
-}
-
-=head2 add_catalog(%params)
-
-Catalog specification.
-
-=cut
-
-sub add_catalog {
-    my $self = shift;
-
-    debug( 2, "add_catalog" );
-    my %params = %{ $self->{'catalog'} };
-
-    # Type (mandatory)
-    $self->{'catalog'} = $self->reserve('Catalog');
-    my $content = { 'Type' => $self->name('Catalog') };
-
-    # Pages (mandatory) [indirected reference]
-    my $pages = $self->reserve('Pages');
-    $$content{'Pages'} = $self->indirect_ref(@$pages);
-    $self->{'pages'}{'id'} = $$content{'Pages'}[1];
-
-    # Outlines [indirected reference]
-    $$content{'Outlines'} = $self->indirect_ref( @{ $self->{'outlines'}->{'id'} } )
-        if defined $self->{'outlines'};
-
-    # PageMode
-    $$content{'PageMode'} = $self->name($params{'PageMode'}) if defined $params{'PageMode'};
-
-    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ) );
     $self->cr;
 }
 
@@ -821,35 +395,31 @@ sub add_outlines {
 
 =head2 new_outline(%params)
 
-Add an outline to the document using the given parameters.Return the newly created
-outline.
+Adds  an  outline  to  the  document using the given parameters. Return the newly
+created outline. Parameters can be:
 
-Parameters can be:
-
-=over 4
-
-=item Title
-
-  The title of the outline. Mandatory.
-
-=item Destination
-
-  The Destination of this outline item.In this version,it is only possible to give
-  a page as destination. The default destination is the current page.
-
-=item Parent
-
-  The parent of this outline in the outlines tree. This is an outline object. This
-  way you represent the tree of your outlines.
+    +-------------+-------------------------------------------------------------+
+    | Key         | Description                                                 |
+    +-------------+-------------------------------------------------------------+
+    |             |                                                             |
+    | Title       | The title of the outline. Mandatory.                        |
+    |             |                                                             |
+    | Destination | The Destination of this outline item. In this version,it is |
+    |             | only possible to give a page as destination. The default    |
+    |             | destination is the current page.                            |
+    |             |                                                             |
+    | Parent      | The parent of this outline in the outlines tree. This is an |
+    |             | outline object. This way you represent the tree of your     |
+    |             | outlines.                                                   |
+    |             |                                                             |
+    +-------------+-------------------------------------------------------------+
 
 Example:
 
-  my $outline = $pdf->new_outline('Title' => 'Item 1');
-  $pdf->new_outline('Title' => 'Item 1.1', 'Parent' => $outline);
-  $pdf->new_outline('Title' => 'Item 1.2', 'Parent' => $outline);
-  $pdf->new_outline('Title' => 'Item 2');
-
-=back
+    my $outline = $pdf->new_outline('Title' => 'Item 1');
+    $pdf->new_outline('Title' => 'Item 1.1', 'Parent' => $outline);
+    $pdf->new_outline('Title' => 'Item 1.2', 'Parent' => $outline);
+    $pdf->new_outline('Title' => 'Item 2');
 
 =cut
 
@@ -877,7 +447,7 @@ C<get_page_size> has  one  optional parameter to specify the paper name. Possibl
 values are a0-a6, a4l,letter,broadsheet,ledger,tabloid,legal,executive and 36x36.
 Default is a4.
 
-  my $root = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
+    my $root = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
 
 =cut
 
@@ -1059,227 +629,35 @@ sub add_pages {
     }
 }
 
-=head2 add_crossrefsection()
-
-=cut
-
-sub add_crossrefsection {
-    my ($self) = @_;
-
-    debug( 2, "add_crossrefsection():" );
-
-    # <cross-reference section> ::=
-    #   xref
-    # <cross-reference subsection>+
-    $self->{'crossrefstartpoint'} = $self->position;
-    $self->add('xref');
-    $self->cr;
-    confess "Fatal error: should contains at least one cross reference subsection."
-        unless defined $self->{'crossrefsubsection'};
-    for my $subsection ( sort keys %{ $self->{'crossrefsubsection'} } ) {
-        $self->add_crossrefsubsection($subsection);
-    }
-}
-
-=head2 add_crossrefsubsection($subsection)
-
-=cut
-
-sub add_crossrefsubsection {
-    my ($self, $subsection) = @_;
-
-    debug( 2, "add_crossrefsubsection():" );
-
-    # <cross-reference subsection> ::=
-    #   <object number of first entry in subsection>
-    #   <number of entries in subsection>
-    #   <cross-reference entry>+
-    #
-    # <cross-reference entry> ::= <in-use entry> | <free entry>
-    #
-    # <in-use entry> ::= <byte offset> <generation number> n <end-of-line>
-    #
-    # <end-of-line> ::= <space> <carriage return>
-    #   | <space> <linefeed>
-    #   | <carriage return> <linefeed>
-    #
-    # <free entry> ::=
-    #   <object number of next free object>
-    #   <generation number> f <end-of-line>
-
-    $self->add( 0, ' ', 1 + scalar @{ $self->{'crossrefsubsection'}{$subsection} } );
-    $self->cr;
-    $self->add( sprintf "%010d %05d %s ", 0, 65535, 'f' );
-    $self->cr;
-    for my $entry ( sort { $$a[0] <=> $$b[0] } @{ $self->{'crossrefsubsection'}{$subsection} } ) {
-        $self->add( sprintf "%010d %05d %s ", $$entry[1], $subsection, $$entry[2] ? 'n' : 'f' );
-
-        # printf "%010d %010x %05d n\n", $$entry[1], $$entry[1], $subsection;
-        $self->cr;
-    }
-}
-
-=head2 add_trailer()
-
-=cut
-
-sub add_trailer {
-	my $self = shift;
-	debug( 2, "add_trailer():" );
-
-	# <trailer> ::= trailer
-	#   <<
-	#   <trailer key value pair>+
-	#   >>
-	#   startxref
-	#   <cross-reference table start address>
-	#   %%EOF
-
-	my @keys = (
-            'Size',   # integer (required)
-            'Prev',   # integer (req only if more than one cross-ref section)
-            'Root',   # dictionary (required)
-            'Info',   # dictionary (optional)
-            'ID',     # array (optional) (PDF 1.1)
-            'Encrypt' # dictionary (req if encrypted) (PDF 1.1)
-        );
-
-	# TODO: should check for required fields
-	$self->add('trailer');
-	$self->cr;
-	$self->add('<<');
-	$self->cr;
-	$self->{'trailer'}{'Size'} = 1;
-	map { $self->{'trailer'}{'Size'} += scalar @{ $self->{'crossrefsubsection'}{$_} } } keys %{ $self->{'crossrefsubsection'} };
-	$self->{'trailer'}{'Root'} = &encode( @{ $self->indirect_ref( @{ $self->{'catalog'} } ) } );
-	$self->{'trailer'}{'Info'} = &encode( @{ $self->indirect_ref( @{ $self->{'info'} } ) } )
-            if defined $self->{'info'};
-
-	for my $k (@keys) {
-            next unless defined $self->{'trailer'}{$k};
-            $self->add( "/$k ",
-                        ref $self->{'trailer'}{$k} eq 'ARRAY' ? join( ' ', @{ $self->{'trailer'}{$k} } ) : $self->{'trailer'}{$k} );
-            $self->cr;
-	}
-	$self->add('>>');
-	$self->cr;
-	$self->add('startxref');
-	$self->cr;
-	$self->add( $self->{'crossrefstartpoint'} );
-	$self->cr;
-	$self->add('%%EOF');
-	$self->cr;
-}
-
-=head2 cr()
-
-=cut
-
-sub cr {
-    my ($self) = @_;
-
-    debug( 3, "cr():" );
-    $self->add( &encode('cr') );
-}
-
-=head2 page_stream($page)
-
-=cut
-
-sub page_stream {
-    my ($self, $page) = @_;
-
-    debug( 2, "page_stream():" );
-
-    if (defined $self->{'reservations'}{'stream_length'}) {
-        ## If it is the same page, use the same stream.
-        $self->cr, return
-            if defined $page
-            && defined $self->{'stream_page'}
-        && $page == $self->{'current_page'}
-        && $self->{'stream_page'} == $page;
-
-        # Remember the position
-        my $len = $self->position - $self->{'stream_pos'} + 1;
-
-        # Close the stream and the object
-        $self->cr;
-        $self->add('endstream');
-        $self->cr;
-        $self->add('endobj');
-        $self->cr;
-        $self->cr;
-
-        # Add the length
-        $self->add_object( $self->indirect_obj( $self->number($len), 'stream_length' ) );
-        $self->cr;
-    }
-
-    # open a new stream if needed
-    if (defined $page) {
-
-        # get an object id for the stream
-        my $obj = $self->reserve('stream');
-
-        # release it
-        delete $self->{'reservations'}{'stream'};
-
-        # get another one for the length of this stream
-        my $stream_length = $self->reserve('stream_length');
-        push @$stream_length, 'R';
-        push @{ $page->{'contents'} }, $obj;
-
-        # write the beginning of the object
-        push @{ $self->{'crossrefsubsection'}{ $$obj[1] } }, [ $$obj[0], $self->position, 1 ];
-        $self->add("$$obj[0] $$obj[1] obj");
-        $self->cr;
-        $self->add('<<');
-        $self->cr;
-        $self->add( '/Length ', join( ' ', @$stream_length ) );
-        $self->cr;
-        $self->add('>>');
-        $self->cr;
-        $self->add('stream');
-        $self->cr;
-        $self->{'stream_pos'}  = $self->position;
-        $self->{'stream_page'} = $page;             # $self->{'current_page'};
-    }
-}
-
 =head2 font(%params)
 
 Prepare a font using the given arguments. This font will be added to the document
-only if it is used at least once before the close method is called.
+only if it is used at least once before the close method is called.Parameters are
+listed below:
 
-  my $f1 = $pdf->font('BaseFont' => 'Helvetica');
-
-Parameters can be:
-
-=over 4
-
-=item Subtype
-
-  Type of font. PDF defines some types of fonts. It must be one of the predefined
-  type Type1, Type3, TrueType or Type0.
-  In this version, only Type1 is supported. This is the default value.
-
-=item Encoding
-
-  Specifies the  encoding  from which the new encoding differs. It must be one of
-  the predefined encodings MacRomanEncoding, MacExpertEncoding or WinAnsiEncoding.
-  In this version, only WinAnsiEncoding is supported. This is the default value.
-
-=item BaseFont
-
-  The PostScript name of the font. It can be one of the following base fonts:
-  Courier, Courier-Bold, Courier-BoldOblique, Courier-Oblique, Helvetica,
-  Helvetica-Bold, Helvetica-BoldOblique, Helvetica-Oblique, Times-Roman,
-  Times-Bold, Times-Italic or Times-BoldItalic.
+    +----------+----------------------------------------------------------------+
+    | Key      | Description                                                    |
+    +----------+----------------------------------------------------------------+
+    | Subtype  | Type of font. PDF defines some types of fonts. It must be one  |
+    |          | of the predefined type Type1, Type3, TrueType or Type0.In this |
+    |          | version, only Type1 is supported. This is the default value.   |
+    |          |                                                                |
+    | Encoding | Specifies the  encoding  from which the new encoding differs.  |
+    |          | It must be one of the predefined encodings MacRomanEncoding,   |
+    |          | MacExpertEncoding or WinAnsiEncoding. In this version, only    |
+    |          | WinAnsiEncoding is supported. This is the default value.       |
+    |          |                                                                |
+    | BaseFont | The PostScript name of the font. It can be one of the following|
+    |          | base fonts: Courier, Courier-Bold, Courier-BoldOblique,        |
+    |          | Courier-Oblique, Helvetica, Helvetica-Bold,                    |
+    |          | Helvetica-BoldOblique, Helvetica-Oblique, Times-Roman,         |
+    |          | Times-Bold, Times-Italic or Times-BoldItalic.                  |
+    +----------+----------------------------------------------------------------+
 
 The Symbol or  ZapfDingbats  fonts are not supported in this version. The default
 font is Helvetica.
 
-=back
+    my $f1 = $pdf->font('BaseFont' => 'Helvetica');
 
 =cut
 
@@ -1401,26 +779,15 @@ are slower because they are decompressed, modified and  compressed again. The gi
 support is limited to images with a LZW minimum code size of 8. Small images with
 few colors can have a smaller minimum code size and will not work.
 
-Parameters:
-
-=over 4
-
-=item filename
-
-  File name of image (required).
-
-=back
-
 =cut
 
 sub image {
     my ($self, $filename) = @_;
 
     my $num = 1 + scalar keys %{ $self->{'xobjects'} };
+
     my $image;
-
     my $colorspace;
-
     my @a;
 
     if ( $filename =~ /\.gif$/i ) {
@@ -1486,28 +853,172 @@ sub image {
     { 'num' => $num, 'width' => $image->{width}, 'height' => $image->{height} };
 }
 
-=head2 uses_font($page, $font)
+sub add_crossrefsection {
+    my ($self) = @_;
 
-=cut
+    debug( 2, "add_crossrefsection():" );
 
-sub uses_font {
-    my ($self, $page, $font) = @_;
-
-    $page->{'resources'}{'fonts'}{$font} = 1;
-    $page->{'resources'}{'ProcSet'} = [ 'PDF', 'Text' ];
-    $self->{'fontobj'}{$font} = 1;
+    # <cross-reference section> ::=
+    #   xref
+    # <cross-reference subsection>+
+    $self->{'crossrefstartpoint'} = $self->position;
+    $self->add('xref');
+    $self->cr;
+    confess "Fatal error: should contains at least one cross reference subsection."
+        unless defined $self->{'crossrefsubsection'};
+    for my $subsection ( sort keys %{ $self->{'crossrefsubsection'} } ) {
+        $self->add_crossrefsubsection($subsection);
+    }
 }
 
-=head2 uses_xobject($page, $xobject)
+sub add_crossrefsubsection {
+    my ($self, $subsection) = @_;
 
-=cut
+    debug( 2, "add_crossrefsubsection():" );
 
-sub uses_xobject {
-    my ($self, $page, $xobject) = @_;
+    # <cross-reference subsection> ::=
+    #   <object number of first entry in subsection>
+    #   <number of entries in subsection>
+    #   <cross-reference entry>+
+    #
+    # <cross-reference entry> ::= <in-use entry> | <free entry>
+    #
+    # <in-use entry> ::= <byte offset> <generation number> n <end-of-line>
+    #
+    # <end-of-line> ::= <space> <carriage return>
+    #   | <space> <linefeed>
+    #   | <carriage return> <linefeed>
+    #
+    # <free entry> ::=
+    #   <object number of next free object>
+    #   <generation number> f <end-of-line>
 
-    $page->{'resources'}{'xobjects'}{$xobject} = 1;
-    $page->{'resources'}{'ProcSet'} = [ 'PDF', 'Text' ];
-    $self->{'xobj'}{$xobject} = 1;
+    $self->add( 0, ' ', 1 + scalar @{ $self->{'crossrefsubsection'}{$subsection} } );
+    $self->cr;
+    $self->add( sprintf "%010d %05d %s ", 0, 65535, 'f' );
+    $self->cr;
+    for my $entry ( sort { $$a[0] <=> $$b[0] } @{ $self->{'crossrefsubsection'}{$subsection} } ) {
+        $self->add( sprintf "%010d %05d %s ", $$entry[1], $subsection, $$entry[2] ? 'n' : 'f' );
+
+        # printf "%010d %010x %05d n\n", $$entry[1], $$entry[1], $subsection;
+        $self->cr;
+    }
+}
+
+sub add_trailer {
+    my $self = shift;
+
+    debug( 2, "add_trailer():" );
+
+    # <trailer> ::= trailer
+    #   <<
+    #   <trailer key value pair>+
+    #   >>
+    #   startxref
+    #   <cross-reference table start address>
+    #   %%EOF
+
+    my @keys = (
+        'Size',   # integer (required)
+        'Prev',   # integer (req only if more than one cross-ref section)
+        'Root',   # dictionary (required)
+        'Info',   # dictionary (optional)
+        'ID',     # array (optional) (PDF 1.1)
+        'Encrypt' # dictionary (req if encrypted) (PDF 1.1)
+    );
+
+    # TODO: should check for required fields
+    $self->add('trailer');
+    $self->cr;
+    $self->add('<<');
+    $self->cr;
+    $self->{'trailer'}{'Size'} = 1;
+    map { $self->{'trailer'}{'Size'} += scalar @{ $self->{'crossrefsubsection'}{$_} } } keys %{ $self->{'crossrefsubsection'} };
+    $self->{'trailer'}{'Root'} = &encode( @{ $self->indirect_ref( @{ $self->{'catalog'} } ) } );
+    $self->{'trailer'}{'Info'} = &encode( @{ $self->indirect_ref( @{ $self->{'info'} } ) } )
+        if defined $self->{'info'};
+
+    for my $k (@keys) {
+        next unless defined $self->{'trailer'}{$k};
+        $self->add( "/$k ",
+                    ref $self->{'trailer'}{$k} eq 'ARRAY' ? join( ' ', @{ $self->{'trailer'}{$k} } ) : $self->{'trailer'}{$k} );
+        $self->cr;
+    }
+    $self->add('>>');
+    $self->cr;
+    $self->add('startxref');
+    $self->cr;
+    $self->add( $self->{'crossrefstartpoint'} );
+    $self->cr;
+    $self->add('%%EOF');
+    $self->cr;
+}
+
+sub cr {
+    my ($self) = @_;
+
+    debug( 3, "cr():" );
+    $self->add( &encode('cr') );
+}
+
+sub page_stream {
+    my ($self, $page) = @_;
+
+    debug( 2, "page_stream():" );
+
+    if (defined $self->{'reservations'}{'stream_length'}) {
+        ## If it is the same page, use the same stream.
+        $self->cr, return
+            if defined $page
+            && defined $self->{'stream_page'}
+        && $page == $self->{'current_page'}
+        && $self->{'stream_page'} == $page;
+
+        # Remember the position
+        my $len = $self->position - $self->{'stream_pos'} + 1;
+
+        # Close the stream and the object
+        $self->cr;
+        $self->add('endstream');
+        $self->cr;
+        $self->add('endobj');
+        $self->cr;
+        $self->cr;
+
+        # Add the length
+        $self->add_object( $self->indirect_obj( $self->number($len), 'stream_length' ) );
+        $self->cr;
+    }
+
+    # open a new stream if needed
+    if (defined $page) {
+
+        # get an object id for the stream
+        my $obj = $self->reserve('stream');
+
+        # release it
+        delete $self->{'reservations'}{'stream'};
+
+        # get another one for the length of this stream
+        my $stream_length = $self->reserve('stream_length');
+        push @$stream_length, 'R';
+        push @{ $page->{'contents'} }, $obj;
+
+        # write the beginning of the object
+        push @{ $self->{'crossrefsubsection'}{ $$obj[1] } }, [ $$obj[0], $self->position, 1 ];
+        $self->add("$$obj[0] $$obj[1] obj");
+        $self->cr;
+        $self->add('<<');
+        $self->cr;
+        $self->add( '/Length ', join( ' ', @$stream_length ) );
+        $self->cr;
+        $self->add('>>');
+        $self->cr;
+        $self->add('stream');
+        $self->cr;
+        $self->{'stream_pos'}  = $self->position;
+        $self->{'stream_page'} = $page;
+    }
 }
 
 =head2 get_data()
@@ -1522,6 +1033,313 @@ sub get_data {
     shift->{'data'};
 }
 
+sub uses_font {
+    my ($self, $page, $font) = @_;
+
+    $page->{'resources'}{'fonts'}{$font} = 1;
+    $page->{'resources'}{'ProcSet'} = [ 'PDF', 'Text' ];
+    $self->{'fontobj'}{$font} = 1;
+}
+
+sub uses_xobject {
+    my ($self, $page, $xobject) = @_;
+
+    $page->{'resources'}{'xobjects'}{$xobject} = 1;
+    $page->{'resources'}{'ProcSet'} = [ 'PDF', 'Text' ];
+    $self->{'xobj'}{$xobject} = 1;
+}
+
+sub debug {
+    my ($level, $msg) = @_;
+
+    return unless ( $DEBUG >= $level );
+    my $s = scalar @_ ? sprintf $msg, @_ : $msg;
+
+    warn "DEBUG ($level): $s\n";
+}
+
+sub version {
+    my ($self, $v) = @_;
+
+    if (defined $v) {
+        # TODO: should test version (1.0 to 1.3)
+        $self->{'version'} = $v;
+    }
+    $self->{'version'};
+}
+
+sub add {
+    my $self = shift;
+    my $data = join '', @_;
+
+    $self->{'size'} += length $data;
+    if ( defined $self->{'fh'} ) {
+        my $fh = $self->{'fh'};
+        print $fh $data;
+    } else {
+        $self->{'data'} .= $data;
+    }
+}
+
+sub position {
+    my ($self) = @_;
+
+    $self->{'size'};
+}
+
+sub add_version {
+    my ($self) = @_;
+
+    debug( 2, "add_version(): $self->{'version'}" );
+    $self->add( "%PDF-" . $self->{'version'} );
+    $self->cr;
+}
+
+sub add_object {
+    my ($self, $v) = @_;
+
+    my $val = &encode(@$v);
+    $self->add($val);
+    $self->cr;
+    debug( 3, "add_object(): $v -> $val" );
+    [ $$v[1][0], $$v[1][1] ];
+}
+
+sub null {
+    my ($self) = @_;;
+
+    [ 'null', 'null' ];
+}
+
+sub boolean {
+    my ($self, $val) = @_;
+
+    [ 'boolean', $val ];
+}
+
+sub number {
+    my ($self, $val) = @_;;
+
+    [ 'number', $val ];
+}
+
+sub name {
+    my ($self, $val) = @_;
+
+    [ 'name', $val ];
+}
+
+sub string {
+    my ($self, $val) = @_;
+
+    [ 'string', $val ];
+}
+
+sub verbatim {
+    my ($self, $val) = @_;
+
+    [ 'verbatim', $val ];
+}
+
+sub array {
+    my $self = shift;
+
+    [ 'array', [@_] ];
+}
+
+sub dictionary {
+    my $self = shift;
+
+    [ 'dictionary', {@_} ];
+}
+
+sub indirect_obj {
+    my $self = shift;
+
+    my ($id, $gen, $type, $name);
+    $name = $_[1];
+    $type = $_[0][1]{'Type'}[1]
+        if defined $_[0][1] && ref $_[0][1] eq 'HASH' && defined $_[0][1]{'Type'};
+
+    if ( defined $name && defined $self->{'reservations'}{$name} ) {
+        ( $id, $gen ) = @{ $self->{'reservations'}{$name} };
+        delete $self->{'reservations'}{$name};
+    } elsif ( defined $type && defined $self->{'reservations'}{$type} ) {
+        ( $id, $gen ) = @{ $self->{'reservations'}{$type} };
+        delete $self->{'reservations'}{$type};
+    } else {
+        $id  = ++$self->{'object_number'};
+        $gen = $self->{'generation_number'};
+    }
+    debug( 3, "indirect_obj(): " . $self->position );
+    push @{ $self->{'crossrefsubsection'}{$gen} }, [ $id, $self->position, 1 ];
+    [ 'object', [ $id, $gen, @_ ] ];
+}
+
+sub indirect_ref {
+    my $self = shift;
+
+    [ 'ref', [@_] ];
+}
+
+sub stream {
+    my $self = shift;
+
+    [ 'stream', {@_} ];
+}
+
+sub add_info {
+    my $self = shift;
+
+    debug( 2, "add_info():" );
+    my %params = @_;
+    $params{'Author'}   = $self->{'Author'}   if defined $self->{'Author'};
+    $params{'Creator'}  = $self->{'Creator'}  if defined $self->{'Creator'};
+    $params{'Title'}    = $self->{'Title'}    if defined $self->{'Title'};
+    $params{'Subject'}  = $self->{'Subject'}  if defined $self->{'Subject'};
+    $params{'Keywords'} = $self->{'Keywords'} if defined $self->{'Keywords'};
+    $params{'CreationDate'} = $self->{'CreationDate'}
+    if defined $self->{'CreationDate'};
+
+    $self->{'info'} = $self->reserve('Info');
+    my $content = {
+        'Producer' => $self->string("PDF::Create version $VERSION"),
+        'Type'     => $self->name('Info')
+    };
+    $$content{'Author'} = $self->string( $params{'Author'} )
+        if defined $params{'Author'};
+    $$content{'Creator'} = $self->string( $params{'Creator'} )
+        if defined $params{'Creator'};
+    $$content{'Title'} = $self->string( $params{'Title'} )
+        if defined $params{'Title'};
+    $$content{'Subject'} = $self->string( $params{'Subject'} )
+        if defined $params{'Subject'};
+    $$content{'Keywords'} = $self->string( $params{'Keywords'} )
+        if defined $params{'Keywords'};
+    $$content{'CreationDate'} = $self->string( $params{'CreationDate'} )
+        if defined $params{'CreationDate'};
+
+    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ), 'Info' );
+    $self->cr;
+}
+
+sub add_catalog {
+    my $self = shift;
+
+    debug( 2, "add_catalog" );
+    my %params = %{ $self->{'catalog'} };
+
+    # Type (mandatory)
+    $self->{'catalog'} = $self->reserve('Catalog');
+    my $content = { 'Type' => $self->name('Catalog') };
+
+    # Pages (mandatory) [indirected reference]
+    my $pages = $self->reserve('Pages');
+    $$content{'Pages'} = $self->indirect_ref(@$pages);
+    $self->{'pages'}{'id'} = $$content{'Pages'}[1];
+
+    # Outlines [indirected reference]
+    $$content{'Outlines'} = $self->indirect_ref( @{ $self->{'outlines'}->{'id'} } )
+        if defined $self->{'outlines'};
+
+    # PageMode
+    $$content{'PageMode'} = $self->name($params{'PageMode'}) if defined $params{'PageMode'};
+
+    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ) );
+    $self->cr;
+}
+
+sub encode {
+    my ($type, $val) = @_;
+
+    if ($val) {
+        debug( 4, "encode(): $type $val" );
+    } else {
+        debug( 4, "encode(): $type (no val)" );
+    }
+
+    if (!$type) {
+        cluck "PDF::Create::encode: empty argument, called by ";
+        return 1;
+    }
+
+    ( $type eq 'null' || $type eq 'number' ) && do {
+        1; # do nothing
+    }
+    || $type eq 'cr' && do {
+        $val = "\n";
+    }
+    || $type eq 'boolean' && do {
+        $val =
+            $val eq 'true'  ? $val
+            : $val eq 'false' ? $val
+            : $val eq '0'     ? 'false'
+            :                   'true';
+    }
+    || $type eq 'verbatim' && do {
+        $val = "$val";
+    }
+    || $type eq 'string' && do {
+        $val = '' if not defined $val;
+        # TODO: split it. Quote parentheses.
+        $val = "($val)";
+    }
+    || $type eq 'number' && do {
+        $val = "$val";
+    }
+    || $type eq 'name' && do {
+        $val = '' if not defined $val;
+        $val = "/$val";
+    }
+    || $type eq 'array' && do {
+
+        # array, encode contents individually
+        my $s = '[';
+        for my $v (@$val) {
+            $s .= &encode( $$v[0], $$v[1] ) . " ";
+        }
+        # remove the trailing space
+        chop $s;
+        $val = $s . "]";
+    }
+    || $type eq 'dictionary' && do {
+        my $s = '<<' . &encode('cr');
+        for my $v ( keys %$val ) {
+            $s .= &encode( 'name',            $v ) . " ";
+            $s .= &encode( ${ $$val{$v} }[0], ${ $$val{$v} }[1] );    #  . " ";
+            $s .= &encode('cr');
+        }
+        $val = $s . ">>";
+    }
+    || $type eq 'object' && do {
+        my $s = &encode( 'number', $$val[0] ) . " " . &encode( 'number', $$val[1] ) . " obj";
+        $s .= &encode('cr');
+        $s .= &encode( $$val[2][0], $$val[2][1] );                    #  . " ";
+        $s .= &encode('cr');
+        $val = $s . "endobj";
+    }
+    || $type eq 'ref' && do {
+        my $s = &encode( 'number', $$val[0] ) . " " . &encode( 'number', $$val[1] ) . " R";
+        $val = $s;
+    }
+    || $type eq 'stream' && do {
+        my $data = delete $$val{'Data'};
+        my $s    = '<<' . &encode('cr');
+        for my $v ( keys %$val ) {
+            $s .= &encode( 'name',            $v ) . " ";
+            $s .= &encode( ${ $$val{$v} }[0], ${ $$val{$v} }[1] );    #  . " ";
+            $s .= &encode('cr');
+        }
+        $s .= ">>" . &encode('cr') . "stream" . &encode('cr');
+        $s .= $data . &encode('cr');
+        $val = $s . "endstream" . &encode('cr');
+    }
+    || confess "Error: unknown type '$type'";
+
+    # TODO: add type 'text';
+    $val;
+}
+
 =head1 PAGE METHODS
 
 Page methods are used to draw stuff on a page.Although these methods are packaged
@@ -1533,72 +1351,62 @@ There are internal changes on the horizon who will break code calling methods di
 =head2 new_page(%params)
 
 Add a page to the document using the given parameters. C<new_page> must be called
-first to initialize a root page, used as model for further pages.
+first to initialize a root page, used as model for further pages.Returns a handle
+to the newly created page. Parameters can be:
+
+    +-----------+---------------------------------------------------------------+
+    | Key       | Description                                                   |
+    +-----------+---------------------------------------------------------------+
+    |           |                                                               |
+    | Parent    | The parent of this page in the pages tree.This is page object.|
+    |           |                                                               |
+    | Resources | Resources required by this page.                              |
+    |           |                                                               |
+    | MediaBox  | Rectangle specifying the natural size of the page,for example |
+    |           | the dimensions of an A4 sheet of paper. The coordinates are   |
+    |           | measured in default user space units It must be the reference |
+    |           | of 4 values array.You can use C<get_page_size> to get to get  |
+    |           | the size of standard paper sizes.C<get_page_size> knows about |
+    |           | A0-A6, A4L (landscape), Letter, Legal, Broadsheet, Ledger,    |
+    |           | Tabloid, Executive and 36x36.                                 |
+    | CropBox   | Rectangle specifying the default clipping region for the page |
+    |           | when displayed or printed. The default is the value of the    |
+    |           | MediaBox.                                                     |
+    |           |                                                               |
+    | ArtBox    | Rectangle specifying  an area  of the page to be used when    |
+    |           | placing PDF content into another application. The default is  |
+    |           | the value of the CropBox. [PDF 1.3]                           |
+    |           |                                                               |
+    | TrimBox   | Rectangle specifying the  intended finished size of the page  |
+    |           | (for example, the dimensions of an A4 sheet of paper).In some |
+    |           | cases,the MediaBox will be a larger rectangle, which includes |
+    |           | printing instructions, cut marks or other content.The default |
+    |           | is the value of the CropBox. [PDF 1.3].                       |
+    |           |                                                               |
+    | BleedBox  | Rectangle specifying the region to which all page content     |
+    |           | should be clipped if the page is being output in a production |
+    |           | environment. In such environments, a bleed area is desired,   |
+    |           | to accommodate physical limitations of cutting, folding, and  |
+    |           | trimming  equipment. The actual  printed page may  include    |
+    |           | printer's marks that fall outside the bleed box. The default  |
+    |           | is the value of the CropBox.[PDF 1.3]                         |
+    |           |                                                               |
+    | Rotate    | Specifies the number of degrees the page should be rotated    |
+    |           | clockwise when it is displayed or printed. This value must be |
+    |           | zero (the default) or a multiple of 90. The entire page,      |
+    |           | including contents is rotated.                                |
+    |           |                                                               |
+    +-----------+---------------------------------------------------------------+
 
 Example:
 
-  my $a4 = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
+    my $a4 = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
 
-  my $page1 = $a4->new_page;
-  $page1->string($f1, 20, 306, 396, "some text on page 1");
+    my $page1 = $a4->new_page;
+    $page1->string($f1, 20, 306, 396, "some text on page 1");
 
-  my $page2 = $a4->new_page;
-  $page2->string($f1, 20, 306, 396, "some text on page 2");
-
-Returns a handle to the newly created page.
-
-Parameters can be:
-
-=over 4
-
-=item Parent
-
-  The parent of this page in the pages tree. This is a page object.
-
-=item Resources
-
-  Resources required by this page.
-
-=item MediaBox
-
-  Rectangle specifying the natural size of the page,for example the dimensions of
-  an  A4 sheet of paper. The coordinates are measured in default user space units
-  It must be the reference of 4 values array.You can use C<get_page_size> to  get
-  to get the size of standard paper sizes. C<get_page_size> knows about A0-A6,A4L
-  (landscape),Letter,Legal,Broadsheet, Ledger, Tabloid, Executive and 36x36.
-
-=item CropBox
-
-  Rectangle specifying the default clipping region for the page when displayed or
-  printed. The default is the value of the MediaBox.
-
-=item ArtBox
-
-   Rectangle specifying  an area  of the page to be used when placing PDF content
-   into another application. The default is the value of the CropBox. [PDF 1.3]
-
-=item TrimBox
-
-   Rectangle specifying the  intended finished size of the page (for example, the
-   dimensions of an A4 sheet of paper).In some cases,the MediaBox will be a larger
-   rectangle, which  includes printing instructions, cut marks, or other content.
-   The default is the value of the CropBox. [PDF 1.3].
-
-=item BleedBox
-
-   Rectangle specifying the region to which all page content should be clipped if
-   the  page is being output in a production environment. In such environments, a
-   bleed area is desired, to accommodate physical limitations of cutting, folding,
-   and trimming  equipment. The actual  printed page may  include printer's marks
-   that fall outside the bleed box. The default is the value of the CropBox.[PDF 1.3]
-
-=item Rotate
-
-  Specifies the number of degrees the page should be rotated clockwise when it is
-  displayed or printed. This value must be zero (the default) or a multiple of 90.
-  The entire page, including contents is rotated.
-
-=back
+    my $page2 = $a4->new_page;
+    $page2->string($f1, 20, 306, 396, "some text on page 2");
 
 =cut
 
@@ -1636,29 +1444,27 @@ The optional alignment can be 'r' for right-alignment and 'c' for centered.
 
 Example :
 
-   my $f1 = $pdf->font(
+    my $f1 = $pdf->font(
        'Subtype'  => 'Type1',
        'Encoding' => 'WinAnsiEncoding',
        'BaseFont' => 'Helvetica'
-   );
+    );
 
-   $page->string($f1, 20, 306, 396, "some text");
+    $page->string($f1, 20, 306, 396, "some text");
 
 =head2 string_underline($font, $size, $x, $y, $text, $alignment)
 
 Draw a line for underlining.The parameters are the same as for the string function
 but only the line is drawn. To draw an underlined string you must call both,string
-and string_underline.
+and string_underline. To change the color of  your text  use the C<setrgbcolor()>.
+It  returns the length of the string. So its return value can be used directly for
+the bounding box of an annotation.
 
 Example :
 
     $page->string($f1, 20, 306, 396, "some underlined text");
 
     $page->string_underline($f1, 20, 306, 396, "some underlined text");
-
-To change the color of your text use the C<setrgbcolor> function.
-C<string_underline> returns  the length of the string. So its return value can be
-used directly for the bounding box of an annotation.
 
 =head2 stringl($font, $size, $x, $y $text)
 
@@ -1768,75 +1574,65 @@ Fills the path using the even-odd rule
 
 Example drawing:
 
-  # draw a filled triangle
-  $page->newpath;
-  $page->setrgbcolor 0.1 0.3 0.8;
-  $page->moveto 100 100;
-  $page->lineto 260 300;
-  $page->lineto 300 100;
-  $page->lineto 100 100;
-  $page->fill;
-
+    # draw a filled triangle
+    $page->newpath;
+    $page->setrgbcolor 0.1 0.3 0.8;
+    $page->moveto 100 100;
+    $page->lineto 260 300;
+    $page->lineto 300 100;
+    $page->lineto 100 100;
+    $page->fill;
 
 =head2 image($image_id, $xpos, $ypos, $xalign, $yalign, $xscale, $yscale, $rotate, $xskew, $yskew)
 
-Inserts an image.
+Inserts an image. Parameters can be:
 
-Parameters can be:
-
-=over 4
-
-=item image
-
-  Image id returned by PDF::image (required).
-
-=item xpos, ypos
-
-  Position of image (required).
-
-=item xalign, yalign
-
-  Alignment of image. 0 is left/bottom, 1 is centered and 2 is right, top.
-
-=item xscale, yscale
-
-  Scaling of image. 1.0 is original size.
-
-=item rotate
-
-  Rotation of image. 0 is no rotation, 2*pi is 360° rotation.
-
-=item xskew, yskew
-
-  Skew of image.
-
-=back
+    +----------------+----------------------------------------------------------+
+    | Key            | Description                                              |
+    +----------------+----------------------------------------------------------+
+    |                |                                                          |
+    | image          | Image id returned by PDF::image (required).              |
+    |                |                                                          |
+    | xpos, ypos     | Position of image (required).                            |
+    |                |                                                          |
+    | xalign, yalign | Alignment of image.0 is left/bottom, 1 is centered and 2 |
+    |                | is right, top.                                           |
+    |                |                                                          |
+    | xscale, yscale | Scaling of image. 1.0 is original size.                  |
+    |                |                                                          |
+    | rotate         | Rotation of image.0 is no rotation,2*pi is 360° rotation.|
+    |                |                                                          |
+    | xskew, yskew   | Skew of image.                                           |
+    |                |                                                          |
+    +----------------+----------------------------------------------------------+
 
 Example jpeg image:
 
-  # include a jpeg image with scaling to 20% size
-  my $jpg = $pdf->image("image.jpg");
+    # include a jpeg image with scaling to 20% size
+    my $jpg = $pdf->image("image.jpg");
 
-  $page->image( 'image' => $jpg, 'xscale' => 0.2, 'yscale' => 0.2, 'xpos' => 350, 'ypos' => 400 );
+    $page->image(
+        'image'  => $jpg,
+        'xscale' => 0.2,
+        'yscale' => 0.2,
+        'xpos'   => 350,
+        'ypos'   => 400
+    );
 
 =head1 LIMITATIONS
 
 C<PDF::Create> comes with a couple of limitations or known caveats:
 
-=over 5
-
-=item PDF Size / Memory
+=head2 PDF Size / Memory
 
 C<PDF::Create> assembles the entire PDF in memory if you create very large documents
 on a machine with a small amount of memory your program can fail because it runs out
 of memory.
 
-=item Small GIF images
+=head2 Small GIF images
 
 Some gif images get created with a minimal lzw code size of less than 8. C<PDF::Create>
 can not decode those and they must be converted.
-
-=back
 
 =head1 SUPPORT
 
@@ -1915,39 +1711,8 @@ Copyright 2010, Gary Lieberman
 
 =head1 LICENSE
 
-This program  is  free software; you can redistribute it and / or modify it under
-the  terms  of the the Artistic License (2.0). You may obtain a  copy of the full
-license at:
-
-L<http://www.perlfoundation.org/artistic_license_2_0>
-
-Any  use,  modification, and distribution of the Standard or Modified Versions is
-governed by this Artistic License.By using, modifying or distributing the Package,
-you accept this license. Do not use, modify, or distribute the Package, if you do
-not accept this license.
-
-If your Modified Version has been derived from a Modified Version made by someone
-other than you,you are nevertheless required to ensure that your Modified Version
- complies with the requirements of this license.
-
-This  license  does  not grant you the right to use any trademark,  service mark,
-tradename, or logo of the Copyright Holder.
-
-This license includes the non-exclusive, worldwide, free-of-charge patent license
-to make,  have made, use,  offer to sell, sell, import and otherwise transfer the
-Package with respect to any patent claims licensable by the Copyright Holder that
-are  necessarily  infringed  by  the  Package. If you institute patent litigation
-(including  a  cross-claim  or  counterclaim) against any party alleging that the
-Package constitutes direct or contributory patent infringement,then this Artistic
-License to you shall terminate on the date that such litigation is filed.
-
-Disclaimer  of  Warranty:  THE  PACKAGE  IS  PROVIDED BY THE COPYRIGHT HOLDER AND
-CONTRIBUTORS  "AS IS'  AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES. THE IMPLIED
-WARRANTIES    OF   MERCHANTABILITY,   FITNESS   FOR   A   PARTICULAR  PURPOSE, OR
-NON-INFRINGEMENT ARE DISCLAIMED TO THE EXTENT PERMITTED BY YOUR LOCAL LAW. UNLESS
-REQUIRED BY LAW, NO COPYRIGHT HOLDER OR CONTRIBUTOR WILL BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL,  OR CONSEQUENTIAL DAMAGES ARISING IN ANY WAY OUT OF THE USE
-OF THE PACKAGE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+This is free software; you can redistribute it and / or modify it under the same
+terms as Perl 5.6.0.
 
 =cut
 

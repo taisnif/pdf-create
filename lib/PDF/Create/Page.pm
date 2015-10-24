@@ -23,7 +23,7 @@ use Data::Dumper;
 use POSIX qw(setlocale LC_NUMERIC);
 use Scalar::Util qw(weaken);
 
-our $VERSION = '1.14';
+our $VERSION = '1.15';
 our $DEBUG   = 0;
 
 my $font_widths = &init_widths;

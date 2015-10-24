@@ -1,3 +1,9 @@
+1.15 2015.10.24
+    Added key 'CreationDate' to the list of valid keys to constructor.
+    Tidied up pod document of PDF::Create.
+    Tidied up Makefile.PL script.
+    Removed MANIFEST from .gitignore file.
+
 1.14 2015.10.23
     Added section REPOSITORY, LICENSE to the pod document.
     Added standard pod syntax testing script t/pod.t

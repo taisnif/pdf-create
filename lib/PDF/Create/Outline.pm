@@ -22,7 +22,7 @@ use FileHandle;
 use Data::Dumper;
 use Scalar::Util qw(weaken);
 
-our $VERSION = '1.14';
+our $VERSION = '1.15';
 our $DEBUG   = 0;
 
 sub new
