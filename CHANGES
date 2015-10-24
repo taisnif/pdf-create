@@ -1,3 +1,9 @@
+1.16 2015.10.24
+     Fixed the warning thrown by method PDF::Image::GIF::UnLZW().
+     Tidied up example scripts (eg/sample.pl and eg/sample-cgi.pl).
+     Added sample images used by example scripts.
+     Added standard unit test for MANIFEST file.
+
 1.15 2015.10.24
     Added key 'CreationDate' to the list of valid keys to constructor.
     Tidied up pod document of PDF::Create.

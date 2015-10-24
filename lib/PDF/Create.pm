@@ -1,6 +1,6 @@
 package PDF::Create;
 
-our $VERSION = '1.15';
+our $VERSION = '1.16';
 
 =head1 NAME
 
@@ -8,13 +8,14 @@ PDF::Create - Create PDF files.
 
 =head1 VERSION
 
-Version 1.15
+Version 1.16
 
 =cut
 
 use strict; use warnings;
 
 use Carp qw(confess croak cluck carp);
+use Data::Dumper;
 use FileHandle;
 use Scalar::Util qw(weaken);
 
@@ -459,16 +460,16 @@ sub get_page_size {
         'A1'         => [ 0, 0, 1684, 2380 ],
         'A2'         => [ 0, 0, 1190, 1684 ],
         'A3'         => [ 0, 0, 842,  1190 ],
-        'A4'         => [ 0, 0, 595,  842 ],
-        'A4L'        => [ 0, 0, 842,  595 ],
-        'A5'         => [ 0, 0, 421,  595 ],
-        'A6'         => [ 0, 0, 297,  421 ],
-        'LETTER'     => [ 0, 0, 612,  792 ],
+        'A4'         => [ 0, 0, 595,  842  ],
+        'A4L'        => [ 0, 0, 842,  595  ],
+        'A5'         => [ 0, 0, 421,  595  ],
+        'A6'         => [ 0, 0, 297,  421  ],
+        'LETTER'     => [ 0, 0, 612,  792  ],
         'BROADSHEET' => [ 0, 0, 1296, 1584 ],
-        'LEDGER'     => [ 0, 0, 1224, 792 ],
+        'LEDGER'     => [ 0, 0, 1224, 792  ],
         'TABLOID'    => [ 0, 0, 792,  1224 ],
         'LEGAL'      => [ 0, 0, 612,  1008 ],
-        'EXECUTIVE'  => [ 0, 0, 522,  756 ],
+        'EXECUTIVE'  => [ 0, 0, 522,  756  ],
         '36X36'      => [ 0, 0, 2592, 2592 ],
     );
     if (defined $name) {
@@ -850,7 +851,7 @@ sub image {
         $self->{'xobjects'}{$num}->{'Mask'} = $self->array( $self->number( $image->{mask} ), $self->number( $image->{mask} ) );
     }
 
-    { 'num' => $num, 'width' => $image->{width}, 'height' => $image->{height} };
+    return { 'num' => $num, 'width' => $image->{width}, 'height' => $image->{height} };
 }
 
 sub add_crossrefsection {

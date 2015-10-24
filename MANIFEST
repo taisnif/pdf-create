@@ -1,6 +1,8 @@
 CHANGES
 eg/sample-cgi.pl
 eg/sample.pl
+eg/pdf-logo.gif
+eg/pdf-logo.jpg
 lib/PDF/Create.pm
 lib/PDF/Create/Outline.pm
 lib/PDF/Create/Page.pm
@@ -28,3 +30,4 @@ t/99-wifi-parabola.t
 t/pdf-logo.gif
 t/pdf-logo.jpg
 t/pod.t
+t/manifest.t
