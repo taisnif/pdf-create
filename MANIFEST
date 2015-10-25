@@ -1,4 +1,4 @@
-CHANGES
+Changes
 eg/sample-cgi.pl
 eg/sample.pl
 eg/pdf-logo.gif
@@ -31,3 +31,4 @@ t/pdf-logo.gif
 t/pdf-logo.jpg
 t/pod.t
 t/manifest.t
+t/changes.t
