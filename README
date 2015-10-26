@@ -1,119 +1,103 @@
-  NAME
+NAME
 
-    PDF::Create - create PDF files
+PDF::Create - create PDF files
 
-  DESCRIPTION
+DESCRIPTION
 
-    PDF::Create allows you to create PDF documents using a large
-    number of primitives, and emit the result as a PDF file or
-    stream. PDF stands for Portable Document Format.
+PDF::Create allows you to create PDF documents using a large number of primitives
+and emit the result as a PDF file/stream.PDF stands for Portable Document Format.
 
-    Documents can have several pages, a table of content, an
-    information section and many other PDF elements. More
-    functionnalities will be added as needs arise.
+Documents  can have several pages, a table of content, an information section and
+many other PDF elements. More functionnalities will be added as needs arise.
 
-    Documents are constructed on the fly so the memory footprint is
-    not tied to the size of the pages but only to their number.
+Documents are  constructed on  the fly so the memory footprint is not tied to the
+size of the pages but only to their number.
 
-    It's main advantage over the other PDF modules is that it does
-    not depend on other modules and is perl only (no compiler needed).
-    If you want a quick and dirty way of creating pdf's, PDF::Create
-    is for you. If you need a complete Framework to create complex
-    PDF stuff, you better dive into the PDF::API2 based modules.
-    
-    More information about this module is included in this package.
+It's main advantage over the other PDF modules is that it doesn't depend on other
+modules and is perl only (no compiler needed).
 
-  SYNOPSIS
+If you want a  quick  and dirty way of creating pdf's, PDF::Create is for you. If
+you  need  a complete Framework to create complex PDF stuff, you better dive into
+the PDF::API2 based modules.
 
-        use PDF::Create;
+More information about this module is included in this package.
 
-        my $pdf = new PDF::Create('filename' => 'mypdf.pdf',
-                                  'Version'  => 1.2,
-                                  'PageMode' => 'UseOutlines',
-                                  'Author'   => 'Fabien Tassin',
-                                  'Title'    => 'My title',
-                             );
-        my $root = $pdf->new_page('MediaBox' => [ 0, 0, 612, 792 ]);
+SYNOPSIS
 
-        # Add a page which inherits its attributes from $root
-        my $page = $root->new_page;
+    use strict; use warnings;
+    use PDF::Create;
 
-        # Prepare 2 fonts
-        my $f1 = $pdf->font('Subtype'  => 'Type1',
-                            'Encoding' => 'WinAnsiEncoding',
-                            'BaseFont' => 'Helvetica');
-        my $f2 = $pdf->font('Subtype'  => 'Type1',
-                            'Encoding' => 'WinAnsiEncoding',
-                            'BaseFont' => 'Helvetica-Bold');
+    my $pdf = PDF::Create->new(
+        'filename'     => 'sample.pdf',
+        'Author'       => 'John Doe',
+        'Title'        => 'Sample PDF',
+        'CreationDate' => [ localtime ]
+    );
 
-        # Prepare a Table of Content
-        my $toc = $pdf->new_outline('Title' => 'Document',
-                                    'Destination' => $page);
-        $toc->new_outline('Title' => 'Section 1');
-        my $s2 = $toc->new_outline('Title' => 'Section 2');
-        $s2->new_outline('Title' => 'Subsection 1');
+    # add a A4 sized page
+    my $a4 = $pdf->new_page('MediaBox' => $pdf->get_page_size('A4'));
 
-        $page->stringc($f2, 40, 306, 426, "PDF::Create");
-        $page->stringc($f1, 20, 306, 396, "version $PDF::Create::VERSION");
+    # Add a page which inherits its attributes from $a4
+    my $page = $a4->new_page;
 
-        # Add another page
-        my $page2 = $root->new_page;
-        $page2->line(0, 0, 612, 792);
-        $page2->line(0, 792, 612, 0);
+    # Prepare a font
+    my $f1 = $pdf->font('BaseFont' => 'Helvetica');
 
-        $toc->new_outline('Title' => 'Section 3');
-        $pdf->new_outline('Title' => 'Summary');
+    # Prepare a Table of Content
+    my $toc = $pdf->new_outline('Title' => 'Title Page', 'Destination' => $page);
 
-        # Add something to the first page
-        $page->stringc($f1, 20, 306, 300,
-                       'by Fabien Tassin <fta@oleane.net>');
+    # Write some text
+    $page->stringc($f1, 40, 306, 426, "PDF::Create");
+    $page->stringc($f1, 20, 306, 396, "version $PDF::Create::VERSION");
+    $page->stringc($f1, 20, 306, 300, 'by John Doe <john.doe@example.com>');
 
-        # Add the missing PDF objects and a the footer then close the file
-        $pdf->close;
+    # Add another page
+    my $page2 = $a4->new_page;
 
+    # Draw some lines
+    $page2->line(0, 0, 612, 792);
+    $page2->line(0, 792, 612, 0);
 
-  INSTALLATION
+    $toc->new_outline('Title' => 'Second Page', 'Destination' => $page2);
 
-    Quick answer:
+    # Close the file and write the PDF
+    $pdf->close;
 
-        perl -MCPAN -e 'install PDF::Create'
+INSTALLATION
 
-    Long answer:
+Quick answer:
 
-    To install manually, cd to the directory containing the unpacked
-    distribution and do one of the following:
+    perl -MCPAN -e 'install PDF::Create'
 
-    a.  Create a makefile by running Makefile.PL using the perl
-        program into whose library you want to install and then run
-        make three times:
+Long answer:
 
-            perl Makefile.PL
-            make
-            make test
-            make install
+To install manually, cd to the directory containing the unpacked distribution and
+do one of the following:
 
-    b.  To install into a private library, for example your home
-        directory:
+a) Create a makefile by running Makefile.PL  using  the  perl  program into whose
+library you want to install and then run make three times:
 
-            perl Makefile.PL INSTALLSITELIB=$HOME/lib INSTALLMAN3DIR=$HOME/man
-            make
-            make test
-            make pure_install
+   perl Makefile.PL
+   make
+   make test
+   make install
 
-  AUTHORS
+b) To install into a private library, for example your home directory:
 
-    - Fabien Tassin
+   perl Makefile.PL INSTALLSITELIB=$HOME/lib INSTALLMAN3DIR=$HOME/man
+   make
+   make test
+   make pure_install
 
-    Original Author of PDF::Create
+AUTHORS
 
-    - Markus Baertschi, markus@markus.org
+- Fabien Tassin
 
-    I have taken over maintenence of PDF::Create as Fabien has disappeared
-    and did no longer maintain it in the last years.
-    The last version of PDF::Create from Fabien is 0.06. All never versions
-    have been modified by me.
+  Original Author of PDF::Create
 
-    I maintain PDF::Create in git. You can access the repository directly
-    at http://github.com/markusb/pdf-create.
+- Markus Baertschi, markus@markus.org
 
-
+  I have taken  over maintenence of PDF::Create as Fabien has disappeared and did
+  no longer maintain it in  the  last years. The last version of PDF::Create from
+  Fabien  is 0.06.  All  newer  versions have been modified by me. I maintain the
+  PDF::Create in git. You can access the repository directly at http://github.com/markusb/pdf-create.

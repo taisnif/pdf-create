@@ -6,10 +6,11 @@ use warnings FATAL => 'all';
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    NAME          => 'PDF::Create',
-    VERSION_FROM  => 'lib/PDF/Create.pm',
-    ABSTRACT_FROM => 'lib/PDF/Create.pm',
-    PREREQ_PM     => {
+    NAME             => 'PDF::Create',
+    VERSION_FROM     => 'lib/PDF/Create.pm',
+    ABSTRACT_FROM    => 'lib/PDF/Create.pm',
+    MIN_PERL_VERSION => 5.006,
+    PREREQ_PM => {
         'Carp'         => 0,
         'FileHandle'   => 0,
         'Data::Dumper' => 0,

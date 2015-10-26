@@ -13,11 +13,13 @@
 #
 
 package PDF::Image::JPEG;
+
+use 5.006;
 use strict;
 use warnings;
 use FileHandle;
 
-our $VERSION = '1.17';
+our $VERSION = '1.18';
 our $DEBUG   = 0;
 
 sub new

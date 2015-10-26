@@ -1,3 +1,9 @@
+1.18  2015-10-26 MANWAR
+      - Added MIN_PERL_VERSION to the Makefile.PL script.
+      - Tidied up and documented package PDF::Create.
+      - Tidied up and documented package PDF::Create::Page.
+      - Tidied up README file.
+
 1.17  2015-10-25 MANWAR
       - Renamed file CHANGES to Changes.
       - Tidied up Changes file.

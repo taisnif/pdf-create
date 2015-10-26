@@ -1,6 +1,6 @@
 package PDF::Create;
 
-our $VERSION = '1.17';
+our $VERSION = '1.18';
 
 =head1 NAME
 
@@ -8,10 +8,11 @@ PDF::Create - Create PDF files.
 
 =head1 VERSION
 
-Version 1.17
+Version 1.18
 
 =cut
 
+use 5.006;
 use strict; use warnings;
 
 use Carp qw(confess croak cluck carp);
@@ -63,29 +64,29 @@ Example PDF creation with C<PDF::Create>:
         'CreationDate' => [ localtime ]
     );
 
-    # add a A4 sized page
-    my $a4 = $pdf->new_page('MediaBox' => $pdf->get_page_size('A4'));
+    # Add a A4 sized page
+    my $root = $pdf->new_page('MediaBox' => $pdf->get_page_size('A4'));
 
-    # Add a page which inherits its attributes from $a4
-    my $page = $a4->new_page;
+    # Add a page which inherits its attributes from $root
+    my $page1 = $root->new_page;
 
     # Prepare a font
-    my $f1 = $pdf->font('BaseFont' => 'Helvetica');
+    my $font = $pdf->font('BaseFont' => 'Helvetica');
 
     # Prepare a Table of Content
-    my $toc = $pdf->new_outline('Title' => 'Title Page', 'Destination' => $page);
+    my $toc = $pdf->new_outline('Title' => 'Title Page', 'Destination' => $page1);
 
     # Write some text
-    $page->stringc($f1, 40, 306, 426, "PDF::Create");
-    $page->stringc($f1, 20, 306, 396, "version $PDF::Create::VERSION");
-    $page->stringc($f1, 20, 306, 300, 'by John Doe <john.doe@example.com>');
+    $page1->stringc($font, 40, 306, 426, 'PDF::Create');
+    $page1->stringc($font, 20, 306, 396, "version $PDF::Create::VERSION");
+    $page1->stringc($font, 20, 306, 300, 'by John Doe <john.doe@example.com>');
 
     # Add another page
-    my $page2 = $a4->new_page;
+    my $page2 = $root->new_page;
 
     # Draw some lines
-    $page2->line(0, 0, 612, 792);
-    $page2->line(0, 792, 612, 0);
+    $page2->line(0, 0,   592, 840);
+    $page2->line(0, 840, 592, 0);
 
     $toc->new_outline('Title' => 'Second Page', 'Destination' => $page2);
 
@@ -295,9 +296,9 @@ Reserve the next object number for the given object type.
 
 =cut
 
-sub reserve
-{
+sub reserve {
     my ($self, $name, $type) = @_;;
+
     $type = $name unless defined $type;
 
     confess "Error: an object has already been reserved using this name '$name' "
@@ -484,12 +485,12 @@ sub get_page_size {
     return $pagesizes{$name};
 }
 
-=head2 add_pages(%params)
+=head2 add_pages()
 
 =cut
 
 sub add_pages {
-    my ($self, %params) = @_;
+    my ($self) = @_;
 
     debug( 2, "add_pages():" );
 
@@ -515,26 +516,26 @@ sub add_pages {
         $self->cr;
     }
 
-    for my $xobject ( sort keys %{ $self->{'xobjects'} } ) {
+    for my $xobject (sort keys %{$self->{'xobjects'}}) {
         debug( 2, "add_pages(): xobject: $xobject" );
         $self->{'xobj'}{$xobject} = $self->reserve('XObject');
         $self->add_object( $self->indirect_obj( $self->stream( %{ $self->{'xobjects'}{$xobject} } ), 'XObject' ) );
         $self->cr;
 
-        if ( defined $self->{'reservations'}{"ImageColorSpace$xobject"} ) {
+        if ( defined $self->{'reservations'}{"ImageColorSpace$xobject"}) {
             $self->add_object(
                 $self->indirect_obj( $self->stream( %{ $self->{'xobjects_colorspace'}{$xobject} } ), "ImageColorSpace$xobject" ) );
             $self->cr;
         }
     }
 
-    for my $annotation ( sort keys %{ $self->{'annotations'} } ) {
+    for my $annotation (sort keys %{$self->{'annotations'}}) {
         $self->{'annot'}{$annotation}{'object_info'} = $self->reserve('Annotation');
         $self->add_object( $self->indirect_obj( $self->dictionary( %{ $self->{'annotations'}{$annotation} } ), 'Annotation' ) );
         $self->cr;
     }
 
-    for my $page ( $self->{'pages'}->list ) {
+    for my $page ($self->{'pages'}->list) {
         my $name = $page->{'name'};
         debug( 2, "add_pages: page: $name" );
         my $type = 'Page' . ( defined $page->{'Kids'} && scalar @{ $page->{'Kids'} } ? 's' : '' );
@@ -628,6 +629,93 @@ sub add_pages {
         $self->add_object( $self->indirect_obj( $self->dictionary(%$content), $name ) );
         $self->cr;
     }
+}
+
+=head2 new_page(%params)
+
+Add a page to the document using the given parameters. C<new_page> must be called
+first to initialize a root page, used as model for further pages.Returns a handle
+to the newly created page. Parameters can be:
+
+    +-----------+---------------------------------------------------------------+
+    | Key       | Description                                                   |
+    +-----------+---------------------------------------------------------------+
+    |           |                                                               |
+    | Parent    | The parent of this page in the pages tree.This is page object.|
+    |           |                                                               |
+    | Resources | Resources required by this page.                              |
+    |           |                                                               |
+    | MediaBox  | Rectangle specifying the natural size of the page,for example |
+    |           | the dimensions of an A4 sheet of paper. The coordinates are   |
+    |           | measured in default user space units It must be the reference |
+    |           | of 4 values array.You can use C<get_page_size> to get to get  |
+    |           | the size of standard paper sizes.C<get_page_size> knows about |
+    |           | A0-A6, A4L (landscape), Letter, Legal, Broadsheet, Ledger,    |
+    |           | Tabloid, Executive and 36x36.                                 |
+    | CropBox   | Rectangle specifying the default clipping region for the page |
+    |           | when displayed or printed. The default is the value of the    |
+    |           | MediaBox.                                                     |
+    |           |                                                               |
+    | ArtBox    | Rectangle specifying  an area  of the page to be used when    |
+    |           | placing PDF content into another application. The default is  |
+    |           | the value of the CropBox. [PDF 1.3]                           |
+    |           |                                                               |
+    | TrimBox   | Rectangle specifying the  intended finished size of the page  |
+    |           | (for example, the dimensions of an A4 sheet of paper).In some |
+    |           | cases,the MediaBox will be a larger rectangle, which includes |
+    |           | printing instructions, cut marks or other content.The default |
+    |           | is the value of the CropBox. [PDF 1.3].                       |
+    |           |                                                               |
+    | BleedBox  | Rectangle specifying the region to which all page content     |
+    |           | should be clipped if the page is being output in a production |
+    |           | environment. In such environments, a bleed area is desired,   |
+    |           | to accommodate physical limitations of cutting, folding, and  |
+    |           | trimming  equipment. The actual  printed page may  include    |
+    |           | printer's marks that fall outside the bleed box. The default  |
+    |           | is the value of the CropBox.[PDF 1.3]                         |
+    |           |                                                               |
+    | Rotate    | Specifies the number of degrees the page should be rotated    |
+    |           | clockwise when it is displayed or printed. This value must be |
+    |           | zero (the default) or a multiple of 90. The entire page,      |
+    |           | including contents is rotated.                                |
+    |           |                                                               |
+    +-----------+---------------------------------------------------------------+
+
+Example:
+
+    my $a4 = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
+
+    my $page1 = $a4->new_page;
+    $page1->string($f1, 20, 306, 396, "some text on page 1");
+
+    my $page2 = $a4->new_page;
+    $page2->string($f1, 20, 306, 396, "some text on page 2");
+
+=cut
+
+sub new_page {
+    my ($self, %params) = @_;
+
+    my %valid_new_page_parameters = map { $_ => 1 } (qw/Parent Resources MediaBox CropBox ArtBox TrimBox BleedBox Rotate/);
+    foreach my $key (keys %params) {
+        croak "PDF::Create.pm - new_page(): Received invalid key [$key]"
+            unless (exists $valid_new_page_parameters{$key});
+    }
+
+    my $parent = $params{'Parent'} || $self->{'pages'};
+    my $name   = "Page " . ++$self->{'page_count'};
+    my $page   = $parent->add( $self->reserve( $name, "Page" ), $name );
+    $page->{'resources'} = $params{'Resources'} if defined $params{'Resources'};
+    $page->{'mediabox'}  = $params{'MediaBox'}  if defined $params{'MediaBox'};
+    $page->{'cropbox'}   = $params{'CropBox'}   if defined $params{'CropBox'};
+    $page->{'artbox'}    = $params{'ArtBox'}    if defined $params{'ArtBox'};
+    $page->{'trimbox'}   = $params{'TrimBox'}   if defined $params{'TrimBox'};
+    $page->{'bleedbox'}  = $params{'BleedBox'}  if defined $params{'BleedBox'};
+    $page->{'rotate'}    = $params{'Rotate'}    if defined $params{'Rotate'};
+
+    $self->{'current_page'} = $page;
+
+    $page;
 }
 
 =head2 font(%params)
@@ -1340,285 +1428,6 @@ sub encode {
     # TODO: add type 'text';
     $val;
 }
-
-=head1 PAGE METHODS
-
-Page methods are used to draw stuff on a page.Although these methods are packaged
-in the separate  module C<PDF::Create::Page> you  should call them always through
-the C<$page> handler you get from the C<new_page()> method.
-
-There are internal changes on the horizon who will break code calling methods differently.
-
-=head2 new_page(%params)
-
-Add a page to the document using the given parameters. C<new_page> must be called
-first to initialize a root page, used as model for further pages.Returns a handle
-to the newly created page. Parameters can be:
-
-    +-----------+---------------------------------------------------------------+
-    | Key       | Description                                                   |
-    +-----------+---------------------------------------------------------------+
-    |           |                                                               |
-    | Parent    | The parent of this page in the pages tree.This is page object.|
-    |           |                                                               |
-    | Resources | Resources required by this page.                              |
-    |           |                                                               |
-    | MediaBox  | Rectangle specifying the natural size of the page,for example |
-    |           | the dimensions of an A4 sheet of paper. The coordinates are   |
-    |           | measured in default user space units It must be the reference |
-    |           | of 4 values array.You can use C<get_page_size> to get to get  |
-    |           | the size of standard paper sizes.C<get_page_size> knows about |
-    |           | A0-A6, A4L (landscape), Letter, Legal, Broadsheet, Ledger,    |
-    |           | Tabloid, Executive and 36x36.                                 |
-    | CropBox   | Rectangle specifying the default clipping region for the page |
-    |           | when displayed or printed. The default is the value of the    |
-    |           | MediaBox.                                                     |
-    |           |                                                               |
-    | ArtBox    | Rectangle specifying  an area  of the page to be used when    |
-    |           | placing PDF content into another application. The default is  |
-    |           | the value of the CropBox. [PDF 1.3]                           |
-    |           |                                                               |
-    | TrimBox   | Rectangle specifying the  intended finished size of the page  |
-    |           | (for example, the dimensions of an A4 sheet of paper).In some |
-    |           | cases,the MediaBox will be a larger rectangle, which includes |
-    |           | printing instructions, cut marks or other content.The default |
-    |           | is the value of the CropBox. [PDF 1.3].                       |
-    |           |                                                               |
-    | BleedBox  | Rectangle specifying the region to which all page content     |
-    |           | should be clipped if the page is being output in a production |
-    |           | environment. In such environments, a bleed area is desired,   |
-    |           | to accommodate physical limitations of cutting, folding, and  |
-    |           | trimming  equipment. The actual  printed page may  include    |
-    |           | printer's marks that fall outside the bleed box. The default  |
-    |           | is the value of the CropBox.[PDF 1.3]                         |
-    |           |                                                               |
-    | Rotate    | Specifies the number of degrees the page should be rotated    |
-    |           | clockwise when it is displayed or printed. This value must be |
-    |           | zero (the default) or a multiple of 90. The entire page,      |
-    |           | including contents is rotated.                                |
-    |           |                                                               |
-    +-----------+---------------------------------------------------------------+
-
-Example:
-
-    my $a4 = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
-
-    my $page1 = $a4->new_page;
-    $page1->string($f1, 20, 306, 396, "some text on page 1");
-
-    my $page2 = $a4->new_page;
-    $page2->string($f1, 20, 306, 396, "some text on page 2");
-
-=cut
-
-sub new_page {
-    my ($self, %params) = @_;
-
-    my %valid_new_page_parameters = map { $_ => 1 } (qw/Parent Resources MediaBox CropBox ArtBox TrimBox BleedBox Rotate/);
-    foreach my $key (keys %params) {
-        croak "PDF::Create.pm - new_page(): Received invalid key [$key]"
-            unless (exists $valid_new_page_parameters{$key});
-    }
-
-    my $parent = $params{'Parent'} || $self->{'pages'};
-    my $name   = "Page " . ++$self->{'page_count'};
-    my $page   = $parent->add( $self->reserve( $name, "Page" ), $name );
-    $page->{'resources'} = $params{'Resources'} if defined $params{'Resources'};
-    $page->{'mediabox'}  = $params{'MediaBox'}  if defined $params{'MediaBox'};
-    $page->{'cropbox'}   = $params{'CropBox'}   if defined $params{'CropBox'};
-    $page->{'artbox'}    = $params{'ArtBox'}    if defined $params{'ArtBox'};
-    $page->{'trimbox'}   = $params{'TrimBox'}   if defined $params{'TrimBox'};
-    $page->{'bleedbox'}  = $params{'BleedBox'}  if defined $params{'BleedBox'};
-    $page->{'rotate'}    = $params{'Rotate'}    if defined $params{'Rotate'};
-
-    $self->{'current_page'} = $page;
-
-    $page;
-}
-
-=head2 string($font, $size, $x, $y, $text $alignment)
-
-Add text to the current page using the font object at the given size and position.
-The point (x, y) is the bottom left corner of the rectangle containing the text.
-
-The optional alignment can be 'r' for right-alignment and 'c' for centered.
-
-Example :
-
-    my $f1 = $pdf->font(
-       'Subtype'  => 'Type1',
-       'Encoding' => 'WinAnsiEncoding',
-       'BaseFont' => 'Helvetica'
-    );
-
-    $page->string($f1, 20, 306, 396, "some text");
-
-=head2 string_underline($font, $size, $x, $y, $text, $alignment)
-
-Draw a line for underlining.The parameters are the same as for the string function
-but only the line is drawn. To draw an underlined string you must call both,string
-and string_underline. To change the color of  your text  use the C<setrgbcolor()>.
-It  returns the length of the string. So its return value can be used directly for
-the bounding box of an annotation.
-
-Example :
-
-    $page->string($f1, 20, 306, 396, "some underlined text");
-
-    $page->string_underline($f1, 20, 306, 396, "some underlined text");
-
-=head2 stringl($font, $size, $x, $y $text)
-
-Same as C<string()>.
-
-=head2 stringr($font, $size, $x, $y, $text)
-
-Same as C<string()> but right aligned (alignment 'r').
-
-=head2 stringc($font, $size, $x, $y, $text)
-
-Same as C<string()> but centered (alignment 'c').
-
-=head2 printnl($text, $font, $size, $x, $y)
-
-Similar to  C<string()> but parses the string for newline and prints each part on
-a separate line. Lines spacing is the same as the font-size.Returns the number of
-lines.
-
-Note the different parameter sequence.The first call should specify all parameters,
-font is  the absolute minimum, a warning will be given for the missing y position
-and 800  will  be assumed. All subsequent invocations can omit all but the string
-parameters.
-
-ATTENTION:There is no provision for changing pages.If you run out of space on the
-current page this will draw the string(s) outside the page and it will be invisble.
-
-=head2 string_width($font, $text)
-
-Return the size of the text using the given font in default user space units.This
-does not contain the size of the font yet, to get the length you must multiply by
-the font size.
-
-=head2 line($x1, $y1, $x2, $y2)
-
-Draw a line between ($x1, $y1) and ($x2, $y2).
-
-=head2 set_width($w)
-
-Set the width of subsequent lines to C<w> points.
-
-=head2 setrgbcolor($r, $g, $b)
-
-=head2 setrgbcolorstroke($r, $g, $b)
-
-Set the color  of the subsequent drawing operations. Valid r, g, and b values are
-each between 0.0 and 1.0, inclusive.
-
-Each color ranges from 0.0 to 1.0, i.e., darkest red (0.0) to brightest red(1.0).
-The same holds for green and blue.  These three colors mix  additively to produce
-the colors between black (0.0, 0.0, 0.0) and white (1.0, 1.0, 1.0).
-
-PDF distinguishes between  the stroke  and  fill operations and provides separate
-color settings for each.
-
-=head2 setrgbcolor()
-
-Sets the fill colors used for normal text or filled objects.
-
-=head2 setrgbcolorstroke()
-
-Sets the stroke color used for lines.
-
-=head2 moveto($x, $y)
-
-Moves the current point to (x, y), omitting any connecting line segment.
-
-=head2 lineto($x, $y)
-
-Appends a straight line segment from the current point to (x,y).The current point
-is then set to (x, y).
-
-=head2 curveto($x1, $y1, $x2, $y2, $x3, $y3)
-
-Appends a  Bezier curve to the path. The curve extends  from the current point to
-(x3 ,y3) using (x1 ,y1) and (x2 ,y2) as the Bezier control points.The new current
-point is the set to (x3 ,y3).
-
-=head2 rectangle($x, $y, $w, $h)
-
-Draws a rectangle.
-
-=head2 closepath()
-
-Closes the current  subpath by appending a straight line segment from the current
-point to the starting point of the path.
-
-=head2 newpath()
-
-Ends the current path. The next drawing operation will start a new path.
-
-=head2 stroke()
-
-Strokes (draws) the path.
-
-=head2 closestroke()
-
-Closes and strokes the path.
-
-=head2 fill()
-
-Fills the path using the non-zero winding number rule.
-
-=head2 fill2()
-
-Fills the path using the even-odd rule
-
-Example drawing:
-
-    # draw a filled triangle
-    $page->newpath;
-    $page->setrgbcolor 0.1 0.3 0.8;
-    $page->moveto 100 100;
-    $page->lineto 260 300;
-    $page->lineto 300 100;
-    $page->lineto 100 100;
-    $page->fill;
-
-=head2 image($image_id, $xpos, $ypos, $xalign, $yalign, $xscale, $yscale, $rotate, $xskew, $yskew)
-
-Inserts an image. Parameters can be:
-
-    +----------------+----------------------------------------------------------+
-    | Key            | Description                                              |
-    +----------------+----------------------------------------------------------+
-    |                |                                                          |
-    | image          | Image id returned by PDF::image (required).              |
-    |                |                                                          |
-    | xpos, ypos     | Position of image (required).                            |
-    |                |                                                          |
-    | xalign, yalign | Alignment of image.0 is left/bottom, 1 is centered and 2 |
-    |                | is right, top.                                           |
-    |                |                                                          |
-    | xscale, yscale | Scaling of image. 1.0 is original size.                  |
-    |                |                                                          |
-    | rotate         | Rotation of image.0 is no rotation,2*pi is 360° rotation.|
-    |                |                                                          |
-    | xskew, yskew   | Skew of image.                                           |
-    |                |                                                          |
-    +----------------+----------------------------------------------------------+
-
-Example jpeg image:
-
-    # include a jpeg image with scaling to 20% size
-    my $jpg = $pdf->image("image.jpg");
-
-    $page->image(
-        'image'  => $jpg,
-        'xscale' => 0.2,
-        'yscale' => 0.2,
-        'xpos'   => 350,
-        'ypos'   => 400
-    );
 
 =head1 LIMITATIONS
 
