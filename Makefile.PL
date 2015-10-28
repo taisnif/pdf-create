@@ -25,6 +25,13 @@ WriteMakefile(
     clean      => { FILES => '*.bak *.old mibs/*.dump *.pdf' . 'lib/*/*~ lib/*/*/*~' },
     META_MERGE => {
         'meta-spec' => { version => 2 },
+        provides    => {
+            'PDF::Create'          => { file => 'lib/PDF/Create.pm'        , version => '1.19' },
+            'PDF::Create::Page'    => { file => 'lib/PDF/Create/Page.pm'   , version => '1.19' },
+            'PDF::Create::Outline' => { file => 'lib/PDF/Create/Outline.pm', version => '1.19' },
+            'PDF::Image::GIF'      => { file => 'lib/PDF/Image/GIF.pm'     , version => '1.19' },
+            'PDF::Image::JPEG'     => { file => 'lib/PDF/Image/JPEG.pm'    , version => '1.19' },
+        },
         resources => {
             repository => {
                 type => 'git',

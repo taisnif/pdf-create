@@ -1,3 +1,7 @@
+1.19  2015-10-28 MANWAR
+      - Added key 'provides' to the Makefile.PL script.
+      - Added standard unit test script (t/00-load.t).
+
 1.18  2015-10-26 MANWAR
       - Added MIN_PERL_VERSION to the Makefile.PL script.
       - Tidied up and documented package PDF::Create.
