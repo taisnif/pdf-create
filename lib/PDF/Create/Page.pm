@@ -370,6 +370,29 @@ sub setrgbcolorstroke {
 
 =head2 text(%params)
 
+Renders the text. Parameters are explained as below:
+
+    +--------+------------------------------------------------------------------+
+    | Key    | Description                                                      |
+    +--------+------------------------------------------------------------------+
+    | start  | The start marker, add directive BT                               |
+    | end    | The end marker, add directive ET                                 |
+    | text   | Text to add to the pdf                                           |
+    | F      | Font index to be used, add directive /F<font_index>              |
+    | Tf     | Font size for the text, add directive <font_size> Tf             |
+    | Ts     | Text rise (super/subscript), add directive <mode> Ts             |
+    | Tr     | Text rendering mode, add directive <mode> Tr                     |
+    | TL     | Text leading, add directive <number> TL                          |
+    | Tc     | Character spacing, add directive <number> Tc                     |
+    | Tw     | Word spacing, add directive <number> Tw                          |
+    | Tz     | Horizontal scaling, add directive <number> Tz                    |
+    | Td     | Move to, add directive <x> <y> Td                                |
+    | TD     | Move to and set TL, add directive <x> <y> TD                     |
+    | rot    | Move to and rotate (<r> <x> <y>), add directive                  |
+    |        | <cos(r)>, <sin(r)>, <sin(r)>, <cos(r)>, <x>, <y> Tm              |
+    | T*     | Add new line.                                                    |
+    +--------+------------------------------------------------------------------+
+
 =cut
 
 sub text {
@@ -639,15 +662,24 @@ sub printnl {
     return $n;
 }
 
-sub _get_text ($$) {
-    my ($words, $num_words) = @_;
+=head2 block_text(\%params)
 
-    if (scalar @$words < $num_words) { die @_ };
+Add block of text to the page. Parameters are explained as below:
 
-    return join(' ', map { $$words[$_] // die "wanted $_+1, have ".scalar(@$words) } (0..($num_words-1)));
-}
-
-=head2
+    +------------+--------------------------------------------------------------+
+    | Key        | Description                                                  |
+    +------------+--------------------------------------------------------------+
+    | page       | Object of type PDF::Create::Page                             |
+    | font       | Font index to be used.                                       |
+    | text       | Text block to be used.                                       |
+    | font_size  | Font size for the text.                                      |
+    | text_color | Text color as arrayref i.e. [r, g, b]                        |
+    | line_width | Line width (in points)                                       |
+    | start_y    | First row number (in points) when adding new page.           |
+    | end_y      | Last row number (in points) when to add new page.            |
+    | x          | x co-ordinate to start the text.                             |
+    | y          | y co-ordinate to start the text.                             |
+    +------------+--------------------------------------------------------------+
 
 =cut
 
@@ -664,76 +696,76 @@ sub block_text {
     my $end_y      = $params->{end_y};
     my $x          = $params->{x};
     my $y          = $params->{y};
+    my $one_space  = $page->string_width($font, ' ') * $font_size;
 
-    my @words = split(/ /, $text);
     my @lines = ();
+    foreach my $block (split /\n/, $text) {
+        my @words = split(/ /, $block);
+        my $para_last_line = 0;
 
-    my $avg_word_length = 5;
-    my $one_space   = $page->string_width($font, ' ') * $font_size;
+        while (@words) {
+            my $num_words    = 1;
+            my $string_width = 0;
+            my $space_width  = undef;
 
-    while (@words) {
-        my $num_words    = 1;
-        my $string_width = 0;
-
-        my $space_width = undef;
-
-        while (1) {
-            $string_width = $font_size * $page->string_width(
+            while (1) {
+                $string_width = $font_size * $page->string_width(
                 $font, _get_text(\@words, $num_words));
 
-            # Shorter, try one more word
-            if ($string_width + $one_space < $line_width) {
-                if (scalar(@words) > $num_words) {
-                    $num_words++;
-                    next;
+                # Shorter, try one more word
+                if ($string_width + $one_space < $line_width) {
+                    if (scalar(@words) > $num_words) {
+                        $num_words++;
+                        next;
+                    }
+                }
+
+                last if ($num_words == 1);
+
+                # Longer, chop a word off, then space accordingly
+                $para_last_line = scalar(@words) == $num_words;
+                if ($string_width + $one_space > $line_width || $para_last_line) {
+                    unless ($para_last_line) {
+                        $num_words--;
+                    }
+
+                    $string_width = $font_size * $page->string_width(
+                        $font, _get_text(\@words, $num_words));
+
+                    $space_width = ($line_width - $string_width) / $num_words;
+                    last;
                 }
             }
 
-            last if ($num_words == 1);
+            my %text_param = (
+                start => 1,
+                Tw    => $space_width,
+                F     => $font,
+                Tf    => $font_size,
+                Td    => "$x $y",
+                text  => _get_text(\@words, $num_words),
+                end   => 1,
+            );
 
-            # Longer, chop a word off, then space accordingly
-            if ($string_width + $one_space > $line_width || scalar(@words) == $num_words) {
-                unless (scalar(@words) == $num_words) {
-                    $num_words--;
-                }
-
-                $string_width = $font_size * $page->string_width(
-                    $font, _get_text(\@words, $num_words));
-
-                $space_width = ($line_width - $string_width) / $num_words;
-                last;
+            if ($para_last_line) {
+                delete $text_param{Tw};
             }
-        }
-        push @lines, {
-            text        => _get_text(\@words, $num_words),
-            space_width => $space_width,
-        };
 
-        splice(@words, 0, $num_words);
-    }
+            $page->text(%text_param);
 
-    # Forget justification on the last line
-    # or         it         ends         up         like         this.
-    $lines[-1]->{'space_width'} = undef;
+            if ($y <= $end_y) {
+                $y    = $start_y;
+                $page = $page->{'Parent'}->new_page();
+                $page->setrgbcolor(@$text_color);
+            }
+            else {
+                $y -= int($font_size * 1.5);
+                if ($para_last_line) {
+                    $y -= int($font_size * 1.5);
+                }
+            }
 
-    foreach my $line (@lines) {
-        $page->text(
-            start => 1,
-            Tw    => $line->{'space_width'},
-            F     => $font,
-            Tf    => $font_size,
-            Td    => "$x $y",
-            text  => $line->{'text'},
-            end   => 1,
-        );
-
-        if ($y <= $end_y) {
-            $y = $start_y;
-            $page = $page->{'Parent'}->new_page();
-            $page->setrgbcolor(@$text_color);
-        }
-        else {
-            $y -= int($font_size * 1.5);
+            splice(@words, 0, $num_words);
         }
     }
 }
@@ -1015,6 +1047,18 @@ sub init_widths
                                     249, 249, 249, 249, 249, 888, 249, 275, 249, 249, 249, 249, 610, 721, 888, 309, 249, 249, 249, 249,
                                     249, 666, 249, 249, 249, 277, 249, 249, 277, 499, 721, 499, 249, 249, 249, 249 ],
     };
+}
+
+#
+#
+# PRIVATE METHODS
+
+sub _get_text ($$) {
+    my ($words, $num_words) = @_;
+
+    if (scalar @$words < $num_words) { die @_ };
+
+    return join(' ', map { $$words[$_] } (0..($num_words-1)));
 }
 
 =head1 AUTHORS
