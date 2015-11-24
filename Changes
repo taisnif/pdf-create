@@ -1,3 +1,10 @@
+1.20  2015-11-24 MANWAR
+      - Updated method PDF::Create::Page::string() to handle character/word spacing. (Thanks David Kitcher-Jones).
+      - Updated method PDF::Create::Page::text() to handle font correctly. (Thanks David Kitcher-Jones).
+      - Added new method PDF::Create::Page::block_text() to manage block of text.  (Thanks David Kitcher-Jones).
+      - Updated method PDF::Create::Page::block_text() to handle multiple paragraphs. (MANWAR)
+      - Documented method text() and block_text(). (MANWAR)
+
 1.19  2015-10-28 MANWAR
       - Added key 'provides' to the Makefile.PL script.
       - Added standard unit test script (t/00-load.t).
