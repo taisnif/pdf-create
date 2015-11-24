@@ -1,6 +1,6 @@
 package PDF::Create::Page;
 
-our $VERSION = '1.20';
+our $VERSION = '1.21';
 
 =encoding utf8
 
@@ -10,7 +10,7 @@ PDF::Create::Page - PDF pages tree for PDF::Create
 
 =head1 VERSION
 
-Version 1.20
+Version 1.21
 
 =cut
 
@@ -536,6 +536,7 @@ Example :
 sub string_underline {
     my ($self, $font, $size, $x, $y, $string, $align) = @_;
 
+    $align = 'L' unless defined $align;
     my $len1 = $self->string_width($font, $string) * $size;
     my $len2 = $len1 / 2;
     if (uc($align) eq "R") {

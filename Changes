@@ -1,3 +1,6 @@
+1.21  2015-11-24 14:00:00 MANWAR
+      - Fixed issue RT# 109562.
+
 1.20  2015-11-24 MANWAR
       - Updated method PDF::Create::Page::string() to handle character/word spacing. (Thanks David Kitcher-Jones).
       - Updated method PDF::Create::Page::text() to handle font correctly. (Thanks David Kitcher-Jones).
