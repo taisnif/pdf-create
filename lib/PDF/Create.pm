@@ -1,6 +1,6 @@
 package PDF::Create;
 
-our $VERSION = '1.21';
+our $VERSION = '1.22';
 
 =head1 NAME
 
@@ -8,7 +8,7 @@ PDF::Create - Create PDF files.
 
 =head1 VERSION
 
-Version 1.21
+Version 1.22
 
 =cut
 
@@ -128,8 +128,8 @@ to the constructor are detailed as below:
     | CreationDate | The date the document was created.This is passed as an     |
     |              | anonymous array in the same format as localtime returns.   |
     |              |                                                            |
-    | Debug        | The debug switch, defaults to 0. The other possible value  |
-    |              | is 1.                                                      |
+    | Debug        | The debug level, defaults to 0. It can be any positive     |
+    |              | integers.                                                  |
     |              |                                                            |
     +--------------+------------------------------------------------------------+
 
@@ -198,7 +198,7 @@ sub new {
     if (exists $params{Debug} && defined $params{Debug}) {
         # validate Debug key value
         croak "Invalid value for key 'Debug' received '". $params{Debug} . "'"
-            unless ($params{Debug} =~ /^[1|0]$/);
+            unless (($params{Debug} =~ /^\d+$/) && ($params{Debug} >= 0));
     }
 
     my $class = ref($this) || $this;
