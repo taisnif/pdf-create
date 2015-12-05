@@ -1,3 +1,8 @@
+Revision history for PDF::Create
+
+1.23  2015-12-05 12:40:00 MANWAR
+      - Added parameter validation check for method new_outline().
+
 1.22  2015-11-25 10:35:00 MANWAR
       - Fixed the debug level handling.
       - Updated pod document about the same.

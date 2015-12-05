@@ -1,6 +1,6 @@
 package PDF::Create;
 
-our $VERSION = '1.22';
+our $VERSION = '1.23';
 
 =head1 NAME
 
@@ -8,7 +8,7 @@ PDF::Create - Create PDF files.
 
 =head1 VERSION
 
-Version 1.22
+Version 1.23
 
 =cut
 
@@ -254,7 +254,6 @@ sub new {
             $params{'CreationDate'}->[1], $params{'CreationDate'}->[0];
     }
     if ( defined $params{'Debug'} ) {
-        print "DEBUG\n";
         $DEBUG = $params{'Debug'};
 
         # Enable stack trace for PDF::Create internal routines
@@ -265,371 +264,6 @@ sub new {
 }
 
 =head1 METHODS
-
-=head2 close(%params)
-
-Close does the work of creating the PDF data from the objects collected before.
-You must call close() after you have added all the contents as most of the real
-work building the  PDF is performed there. If omit calling close you get no PDF
-output.
-
-=cut
-
-sub close {
-    my ($self, %params) = @_;
-
-    debug( 2, "Closing PDF" );
-    $self->page_stream;
-    $self->add_outlines if defined $self->{'outlines'};
-    $self->add_catalog;
-    $self->add_pages;
-    $self->add_info;
-    $self->add_crossrefsection;
-    $self->add_trailer;
-    $self->{'fh'}->close if defined $self->{'fh'} && defined $self->{'filename'};
-    $self->{'data'};
-}
-
-=head2 reserve($name, $type)
-
-Reserve the next object number for the given object type.
-
-=cut
-
-sub reserve {
-    my ($self, $name, $type) = @_;;
-
-    $type = $name unless defined $type;
-
-    confess "Error: an object has already been reserved using this name '$name' "
-        if defined $self->{'reservations'}{$name};
-    $self->{'object_number'}++;
-    debug( 2, "reserve(): name=$name type=$type number=$self->{'object_number'} generation=$self->{'generation_number'}" );
-    $self->{'reservations'}{$name} = [ $self->{'object_number'}, $self->{'generation_number'}, $type ];
-
-
-    # Annotations added here by Gary Lieberman.
-    #
-    # Store the Object ID and the Generation Number for later use when we write
-    # out the /Page object.
-    if ($type eq 'Annotation') {
-        $self->{'Annots'}{ $self->{'object_number'} } = $self->{'generation_number'};
-    }
-
-    [ $self->{'object_number'}, $self->{'generation_number'} ];
-}
-
-=head2 add_comment($message)
-
-Add comment to the document.The string will show up in the PDF as postscript-stype
-comment:
-
-    % this is a postscript comment
-
-=cut
-
-sub add_comment {
-    my ($self, $comment) = @_;
-
-    $comment = '' unless defined $comment;
-    debug( 2, "add_comment(): $comment" );
-    $self->add( "%" . $comment );
-    $self->cr;
-}
-
-=head2 add_outlines(%params)
-
-=cut
-
-sub add_outlines {
-    my ($self, %params) = @_;
-
-    debug( 2, "add_outlines" );
-    my $outlines = $self->reserve("Outlines");
-
-    my ($First, $Last);
-    my @list = $self->{'outlines'}->list;
-    my $i    = -1;
-    for my $outline (@list) {
-        $i++;
-        my $name = $outline->{'name'};
-        $First = $outline->{'id'} unless defined $First;
-        $Last = $outline->{'id'};
-        my $content = { 'Title' => $self->string( $outline->{'Title'} ) };
-        if ( defined $outline->{'Kids'} && scalar @{ $outline->{'Kids'} } ) {
-            my $t = $outline->{'Kids'};
-            $$content{'First'} = $self->indirect_ref( @{ $$t[0]->{'id'} } );
-            $$content{'Last'}  = $self->indirect_ref( @{ $$t[$#$t]->{'id'} } );
-        }
-        my $brothers = $outline->{'Parent'}->{'Kids'};
-        my $j        = -1;
-        for my $brother (@$brothers) {
-            $j++;
-            last if $brother == $outline;
-        }
-        $$content{'Next'} = $self->indirect_ref( @{ $$brothers[ $j + 1 ]->{'id'} } )
-            if $j < $#$brothers;
-        $$content{'Prev'} = $self->indirect_ref( @{ $$brothers[ $j - 1 ]->{'id'} } )
-            if $j;
-        $outline->{'Parent'}->{'id'} = $outlines
-            unless defined $outline->{'Parent'}->{'id'};
-        $$content{'Parent'} = $self->indirect_ref( @{ $outline->{'Parent'}->{'id'} } );
-        $$content{'Dest'} =
-            $self->array( $self->indirect_ref( @{ $outline->{'Dest'}->{'id'} } ),
-                          $self->name('Fit'), $self->null, $self->null, $self->null );
-        my $count = $outline->count;
-        $$content{'Count'} = $self->number($count) if $count;
-        my $t = $self->add_object( $self->indirect_obj( $self->dictionary(%$content), $name ) );
-        $self->cr;
-    }
-
-    # Type (required)
-    my $content = { 'Type' => $self->name('Outlines') };
-
-    # Count
-    my $count = $self->{'outlines'}->count;
-    $$content{'Count'} = $self->number($count) if $count;
-    $$content{'First'} = $self->indirect_ref(@$First);
-    $$content{'Last'}  = $self->indirect_ref(@$Last);
-    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ) );
-    $self->cr;
-}
-
-=head2 new_outline(%params)
-
-Adds  an  outline  to  the  document using the given parameters. Return the newly
-created outline. Parameters can be:
-
-    +-------------+-------------------------------------------------------------+
-    | Key         | Description                                                 |
-    +-------------+-------------------------------------------------------------+
-    |             |                                                             |
-    | Title       | The title of the outline. Mandatory.                        |
-    |             |                                                             |
-    | Destination | The Destination of this outline item. In this version,it is |
-    |             | only possible to give a page as destination. The default    |
-    |             | destination is the current page.                            |
-    |             |                                                             |
-    | Parent      | The parent of this outline in the outlines tree. This is an |
-    |             | outline object. This way you represent the tree of your     |
-    |             | outlines.                                                   |
-    |             |                                                             |
-    +-------------+-------------------------------------------------------------+
-
-Example:
-
-    my $outline = $pdf->new_outline('Title' => 'Item 1');
-    $pdf->new_outline('Title' => 'Item 1.1', 'Parent' => $outline);
-    $pdf->new_outline('Title' => 'Item 1.2', 'Parent' => $outline);
-    $pdf->new_outline('Title' => 'Item 2');
-
-=cut
-
-sub new_outline {
-    my ($self, %params) = @_;
-
-    unless ( defined $self->{'outlines'} ) {
-        $self->{'outlines'}             = PDF::Create::Outline->new();
-        # circular reference
-        $self->{'outlines'}->{'pdf'}    = $self;
-        weaken $self->{'outlines'}->{'pdf'};
-        $self->{'outlines'}->{'Status'} = 'opened';
-    }
-    my $parent = $params{'Parent'} || $self->{'outlines'};
-    my $name = "Outline " . ++$self->{'outline_count'};
-    $params{'Destination'} = $self->{'current_page'}  unless defined $params{'Destination'};
-    my $outline = $parent->add( $self->reserve( $name, "Outline" ), $name, %params );
-    $outline;
-}
-
-=head2 get_page_size($name)
-
-Returns the  size of standard paper used for MediaBox-parameter  of  C<new_page>.
-C<get_page_size> has  one  optional parameter to specify the paper name. Possible
-values are a0-a6, a4l,letter,broadsheet,ledger,tabloid,legal,executive and 36x36.
-Default is a4.
-
-    my $root = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
-
-=cut
-
-sub get_page_size {
-    my ($self, $name) = @_;
-
-    my %pagesizes = (
-        'A0'         => [ 0, 0, 2380, 3368 ],
-        'A1'         => [ 0, 0, 1684, 2380 ],
-        'A2'         => [ 0, 0, 1190, 1684 ],
-        'A3'         => [ 0, 0, 842,  1190 ],
-        'A4'         => [ 0, 0, 595,  842  ],
-        'A4L'        => [ 0, 0, 842,  595  ],
-        'A5'         => [ 0, 0, 421,  595  ],
-        'A6'         => [ 0, 0, 297,  421  ],
-        'LETTER'     => [ 0, 0, 612,  792  ],
-        'BROADSHEET' => [ 0, 0, 1296, 1584 ],
-        'LEDGER'     => [ 0, 0, 1224, 792  ],
-        'TABLOID'    => [ 0, 0, 792,  1224 ],
-        'LEGAL'      => [ 0, 0, 612,  1008 ],
-        'EXECUTIVE'  => [ 0, 0, 522,  756  ],
-        '36X36'      => [ 0, 0, 2592, 2592 ],
-    );
-    if (defined $name) {
-        $name = uc($name);
-        # validate page size
-        croak "Invalid page size name '$name' received." unless (exists $pagesizes{$name});
-    }
-    else {
-        $name = 'A4';
-    }
-
-    return $pagesizes{$name};
-}
-
-=head2 add_pages()
-
-=cut
-
-sub add_pages {
-    my ($self) = @_;
-
-    debug( 2, "add_pages():" );
-
-    # Type (required)
-    my $content = { 'Type' => $self->name('Pages') };
-
-    # Kids (required)
-    my $t = $self->{'pages'}->kids;
-    confess "Error: document MUST contains at least one page. Abort."
-        unless scalar @$t;
-
-    my $kids = [];
-    map { push @$kids, $self->indirect_ref(@$_) } @$t;
-    $$content{'Kids'}  = $self->array(@$kids);
-    $$content{'Count'} = $self->number( $self->{'pages'}->count );
-    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ) );
-    $self->cr;
-
-    for my $font ( sort keys %{ $self->{'fonts'} } ) {
-        debug( 2, "add_pages(): font: $font" );
-        $self->{'fontobj'}{$font} = $self->reserve('Font');
-        $self->add_object( $self->indirect_obj( $self->dictionary( %{ $self->{'fonts'}{$font} } ), 'Font' ) );
-        $self->cr;
-    }
-
-    for my $xobject (sort keys %{$self->{'xobjects'}}) {
-        debug( 2, "add_pages(): xobject: $xobject" );
-        $self->{'xobj'}{$xobject} = $self->reserve('XObject');
-        $self->add_object( $self->indirect_obj( $self->stream( %{ $self->{'xobjects'}{$xobject} } ), 'XObject' ) );
-        $self->cr;
-
-        if ( defined $self->{'reservations'}{"ImageColorSpace$xobject"}) {
-            $self->add_object(
-                $self->indirect_obj( $self->stream( %{ $self->{'xobjects_colorspace'}{$xobject} } ), "ImageColorSpace$xobject" ) );
-            $self->cr;
-        }
-    }
-
-    for my $annotation (sort keys %{$self->{'annotations'}}) {
-        $self->{'annot'}{$annotation}{'object_info'} = $self->reserve('Annotation');
-        $self->add_object( $self->indirect_obj( $self->dictionary( %{ $self->{'annotations'}{$annotation} } ), 'Annotation' ) );
-        $self->cr;
-    }
-
-    for my $page ($self->{'pages'}->list) {
-        my $name = $page->{'name'};
-        debug( 2, "add_pages: page: $name" );
-        my $type = 'Page' . ( defined $page->{'Kids'} && scalar @{ $page->{'Kids'} } ? 's' : '' );
-
-        # Type (required)
-        my $content = { 'Type' => $self->name($type) };
-
-        # Resources (required, may be inherited). See page 195.
-        my $resources = {};
-        for my $k ( keys %{ $page->{'resources'} } ) {
-            my $v = $page->{'resources'}{$k};
-            ( $k eq 'ProcSet' ) && do {
-                my $l = [];
-                if ( ref($v) eq 'ARRAY' ) {
-                    map { push @$l, $self->name($_) } @$v;
-                } else {
-                    push @$l, $self->name($v);
-                }
-                $$resources{'ProcSet'} = $self->array(@$l);
-            }
-            || ( $k eq 'fonts' ) && do {
-                my $l = {};
-                map { $$l{"F$_"} = $self->indirect_ref( @{ $self->{'fontobj'}{$_} } ); } keys %{ $page->{'resources'}{'fonts'} };
-                $$resources{'Font'} = $self->dictionary(%$l);
-            }
-            || ( $k eq 'xobjects' ) && do {
-                my $l = {};
-                map { $$l{"Image$_"} = $self->indirect_ref( @{ $self->{'xobj'}{$_} } ); }
-                keys %{ $page->{'resources'}{'xobjects'} };
-                $$resources{'XObject'} = $self->dictionary(%$l);
-            };
-        }
-        if ( defined( $$resources{'Annotation'} ) ) {
-            my $r = $self->add_object( $self->indirect_obj( $self->dictionary(%$resources) ) );
-            $self->cr;
-            $$content{'Resources'} = [ 'ref', [ $$r[0], $$r[1] ] ];
-        }
-        if ( defined( $$resources{'XObject'} ) ) {
-            my $r = $self->add_object( $self->indirect_obj( $self->dictionary(%$resources) ) );
-            $self->cr;
-            $$content{'Resources'} = [ 'ref', [ $$r[0], $$r[1] ] ];
-        } else {
-            $$content{'Resources'} = $self->dictionary(%$resources)
-                if scalar keys %$resources;
-        }
-        for my $K ( 'MediaBox', 'CropBox', 'ArtBox', 'TrimBox', 'BleedBox' ) {
-            my $k = lc $K;
-            if ( defined $page->{$k} ) {
-                my $l = [];
-                map { push @$l, $self->number($_) } @{ $page->{$k} };
-                $$content{$K} = $self->array(@$l);
-            }
-        }
-        $$content{'Rotate'} = $self->number( $page->{'rotate'} ) if defined $page->{'rotate'};
-        if ( $type eq 'Page' ) {
-            $$content{'Parent'} = $self->indirect_ref( @{ $page->{'Parent'}{'id'} } );
-
-            # Content
-            if ( defined $page->{'contents'} ) {
-                my $contents = [];
-                map { push @$contents, $self->indirect_ref(@$_); } @{ $page->{'contents'} };
-                $$content{'Contents'} = $self->array(@$contents);
-            }
-
-            # Annotations added here by Gary Lieberman
-            #
-            # Tell the /Page object that annotations need to be drawn.
-            if ( defined $self->{'annot'} ) {
-                my $Annots    = '[ ';
-                my $is_annots = 0;
-                foreach my $annot_number ( keys %{ $self->{'annot'} } ) {
-                    next if ( $self->{'annot'}{$annot_number}{'page_name'} ne $name );
-                    $is_annots = 1;
-                    debug( 2,
-                           sprintf "annotation number:  $annot_number, page name: $self->{'annot'}{$annot_number}{'page_name'}" );
-                    my $object_number     = $self->{'annot'}{$annot_number}{'object_info'}[0];
-                    my $generation_number = $self->{'annot'}{$annot_number}{'object_info'}[1];
-                    debug( 2, sprintf "object_number: $object_number, generation_number: $generation_number" );
-                    $Annots .= sprintf( "%s %s R ", $object_number, $generation_number );
-                }
-                $$content{'Annots'} = $self->verbatim( $Annots . ']' ) if ($is_annots);
-            }
-        } else {
-            my $kids = [];
-            map { push @$kids, $self->indirect_ref(@$_) } @{ $page->kids };
-            $$content{'Kids'}   = $self->array(@$kids);
-            $$content{'Parent'} = $self->indirect_ref( @{ $page->{'Parent'}{'id'} } )
-                if defined $page->{'Parent'};
-            $$content{'Count'} = $self->number( $page->count );
-        }
-        $self->add_object( $self->indirect_obj( $self->dictionary(%$content), $name ) );
-        $self->cr;
-    }
-}
 
 =head2 new_page(%params)
 
@@ -780,9 +414,186 @@ sub font {
     $num;
 }
 
+=head2 new_outline(%params)
+
+Adds  an  outline  to  the  document using the given parameters. Return the newly
+created outline. Parameters can be:
+
+    +-------------+-------------------------------------------------------------+
+    | Key         | Description                                                 |
+    +-------------+-------------------------------------------------------------+
+    |             |                                                             |
+    | Title       | The title of the outline. Mandatory.                        |
+    |             |                                                             |
+    | Destination | The Destination of this outline item. In this version,it is |
+    |             | only possible to give a page as destination. The default    |
+    |             | destination is the current page.                            |
+    |             |                                                             |
+    | Parent      | The parent of this outline in the outlines tree. This is an |
+    |             | outline object. This way you represent the tree of your     |
+    |             | outlines.                                                   |
+    |             |                                                             |
+    +-------------+-------------------------------------------------------------+
+
+Example:
+
+    my $outline = $pdf->new_outline('Title' => 'Item 1');
+    $pdf->new_outline('Title' => 'Item 1.1', 'Parent' => $outline);
+    $pdf->new_outline('Title' => 'Item 1.2', 'Parent' => $outline);
+    $pdf->new_outline('Title' => 'Item 2');
+
+=cut
+
+sub new_outline {
+    my ($self, %params) = @_;
+
+    croak "PDF::Create - new_outline(): Missing required key [Title]."
+        unless (exists $params{'Title'});
+    croak "PDF::Create - new_outline(): Required key [Title] undefined."
+        unless (defined $params{'Title'});
+
+    if (defined $params{Destination}) {
+        croak "PDF::Create - new_outline(): Invalid value for key [Destination]."
+            unless (ref($params{Destination}) eq 'PDF::Create::Page');
+    }
+
+    if (defined $params{Parent}) {
+        croak "PDF::Create - new_outline(): Invalid value for key [Parent]."
+            unless (ref($params{Parent}) eq 'PDF::Create::Outline');
+    }
+
+    unless ( defined $self->{'outlines'} ) {
+        $self->{'outlines'}             = PDF::Create::Outline->new();
+        # circular reference
+        $self->{'outlines'}->{'pdf'}    = $self;
+        weaken $self->{'outlines'}->{'pdf'};
+        $self->{'outlines'}->{'Status'} = 'opened';
+    }
+
+    my $parent = $params{'Parent'} || $self->{'outlines'};
+    my $name = "Outline " . ++$self->{'outline_count'};
+    $params{'Destination'} = $self->{'current_page'}  unless defined $params{'Destination'};
+    my $outline = $parent->add( $self->reserve( $name, "Outline" ), $name, %params );
+    $outline;
+}
+
+=head2 get_page_size($name)
+
+Returns the  size of standard paper used for MediaBox-parameter  of  C<new_page>.
+C<get_page_size> has  one  optional parameter to specify the paper name. Possible
+values are a0-a6, a4l,letter,broadsheet,ledger,tabloid,legal,executive and 36x36.
+Default is a4.
+
+    my $root = $pdf->new_page( 'MediaBox' => $pdf->get_page_size('A4') );
+
+=cut
+
+sub get_page_size {
+    my ($self, $name) = @_;
+
+    my %pagesizes = (
+        'A0'         => [ 0, 0, 2380, 3368 ],
+        'A1'         => [ 0, 0, 1684, 2380 ],
+        'A2'         => [ 0, 0, 1190, 1684 ],
+        'A3'         => [ 0, 0, 842,  1190 ],
+        'A4'         => [ 0, 0, 595,  842  ],
+        'A4L'        => [ 0, 0, 842,  595  ],
+        'A5'         => [ 0, 0, 421,  595  ],
+        'A6'         => [ 0, 0, 297,  421  ],
+        'LETTER'     => [ 0, 0, 612,  792  ],
+        'BROADSHEET' => [ 0, 0, 1296, 1584 ],
+        'LEDGER'     => [ 0, 0, 1224, 792  ],
+        'TABLOID'    => [ 0, 0, 792,  1224 ],
+        'LEGAL'      => [ 0, 0, 612,  1008 ],
+        'EXECUTIVE'  => [ 0, 0, 522,  756  ],
+        '36X36'      => [ 0, 0, 2592, 2592 ],
+    );
+    if (defined $name) {
+        $name = uc($name);
+        # validate page size
+        croak "Invalid page size name '$name' received." unless (exists $pagesizes{$name});
+    }
+    else {
+        $name = 'A4';
+    }
+
+    return $pagesizes{$name};
+}
+
+=head2 close(%params)
+
+Close does the work of creating the PDF data from the objects collected before.
+You must call close() after you have added all the contents as most of the real
+work building the  PDF is performed there. If omit calling close you get no PDF
+output.
+
+=cut
+
+sub close {
+    my ($self, %params) = @_;
+
+    debug( 2, "Closing PDF" );
+    $self->page_stream;
+    $self->add_outlines if defined $self->{'outlines'};
+    $self->add_catalog;
+    $self->add_pages;
+    $self->add_info;
+    $self->add_crossrefsection;
+    $self->add_trailer;
+    $self->{'fh'}->close if defined $self->{'fh'} && defined $self->{'filename'};
+    $self->{'data'};
+}
+
+=head2 reserve($name, $type)
+
+Reserve the next object number for the given object type.
+
+=cut
+
+sub reserve {
+    my ($self, $name, $type) = @_;;
+
+    $type = $name unless defined $type;
+
+    confess "Error: an object has already been reserved using this name '$name' "
+        if defined $self->{'reservations'}{$name};
+    $self->{'object_number'}++;
+    debug( 2, "reserve(): name=$name type=$type number=$self->{'object_number'} generation=$self->{'generation_number'}" );
+    $self->{'reservations'}{$name} = [ $self->{'object_number'}, $self->{'generation_number'}, $type ];
+
+
+    # Annotations added here by Gary Lieberman.
+    #
+    # Store the Object ID and the Generation Number for later use when we write
+    # out the /Page object.
+    if ($type eq 'Annotation') {
+        $self->{'Annots'}{ $self->{'object_number'} } = $self->{'generation_number'};
+    }
+
+    [ $self->{'object_number'}, $self->{'generation_number'} ];
+}
+
+=head2 add_comment($message)
+
+Add comment to the document.The string will show up in the PDF as postscript-stype
+comment:
+
+    % this is a postscript comment
+
+=cut
+
+sub add_comment {
+    my ($self, $comment) = @_;
+
+    $comment = '' unless defined $comment;
+    debug( 2, "add_comment(): $comment" );
+    $self->add( "%" . $comment );
+    $self->cr;
+}
+
 =head2 annotation(%params)
 
-Adds an  annotation object for the time beeing we only do the 'Link' - 'URI' kind
+Adds an annotation object, for the time being we only do the  'Link' - 'URI' kind
 This is a  sensitive area in the PDF document where text annotations are shown or
 links launched. C<PDF::Create> only supports URI links at this time.
 
@@ -940,6 +751,202 @@ sub image {
     }
 
     return { 'num' => $num, 'width' => $image->{width}, 'height' => $image->{height} };
+}
+
+sub add_outlines {
+    my ($self, %params) = @_;
+
+    debug( 2, "add_outlines" );
+    my $outlines = $self->reserve("Outlines");
+
+    my ($First, $Last);
+    my @list = $self->{'outlines'}->list;
+    my $i    = -1;
+    for my $outline (@list) {
+        $i++;
+        my $name = $outline->{'name'};
+        $First = $outline->{'id'} unless defined $First;
+        $Last = $outline->{'id'};
+        my $content = { 'Title' => $self->string( $outline->{'Title'} ) };
+        if ( defined $outline->{'Kids'} && scalar @{ $outline->{'Kids'} } ) {
+            my $t = $outline->{'Kids'};
+            $$content{'First'} = $self->indirect_ref( @{ $$t[0]->{'id'} } );
+            $$content{'Last'}  = $self->indirect_ref( @{ $$t[$#$t]->{'id'} } );
+        }
+        my $brothers = $outline->{'Parent'}->{'Kids'};
+        my $j        = -1;
+        for my $brother (@$brothers) {
+            $j++;
+            last if $brother == $outline;
+        }
+        $$content{'Next'} = $self->indirect_ref( @{ $$brothers[ $j + 1 ]->{'id'} } )
+            if $j < $#$brothers;
+        $$content{'Prev'} = $self->indirect_ref( @{ $$brothers[ $j - 1 ]->{'id'} } )
+            if $j;
+        $outline->{'Parent'}->{'id'} = $outlines
+            unless defined $outline->{'Parent'}->{'id'};
+        $$content{'Parent'} = $self->indirect_ref( @{ $outline->{'Parent'}->{'id'} } );
+        $$content{'Dest'} =
+            $self->array( $self->indirect_ref( @{ $outline->{'Dest'}->{'id'} } ),
+                          $self->name('Fit'), $self->null, $self->null, $self->null );
+        my $count = $outline->count;
+        $$content{'Count'} = $self->number($count) if $count;
+        my $t = $self->add_object( $self->indirect_obj( $self->dictionary(%$content), $name ) );
+        $self->cr;
+    }
+
+    # Type (required)
+    my $content = { 'Type' => $self->name('Outlines') };
+
+    # Count
+    my $count = $self->{'outlines'}->count;
+    $$content{'Count'} = $self->number($count) if $count;
+    $$content{'First'} = $self->indirect_ref(@$First);
+    $$content{'Last'}  = $self->indirect_ref(@$Last);
+    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ) );
+    $self->cr;
+}
+
+sub add_pages {
+    my ($self) = @_;
+
+    debug( 2, "add_pages():" );
+
+    # Type (required)
+    my $content = { 'Type' => $self->name('Pages') };
+
+    # Kids (required)
+    my $t = $self->{'pages'}->kids;
+    confess "Error: document MUST contains at least one page. Abort."
+        unless scalar @$t;
+
+    my $kids = [];
+    map { push @$kids, $self->indirect_ref(@$_) } @$t;
+    $$content{'Kids'}  = $self->array(@$kids);
+    $$content{'Count'} = $self->number( $self->{'pages'}->count );
+    $self->add_object( $self->indirect_obj( $self->dictionary(%$content) ) );
+    $self->cr;
+
+    for my $font ( sort keys %{ $self->{'fonts'} } ) {
+        debug( 2, "add_pages(): font: $font" );
+        $self->{'fontobj'}{$font} = $self->reserve('Font');
+        $self->add_object( $self->indirect_obj( $self->dictionary( %{ $self->{'fonts'}{$font} } ), 'Font' ) );
+        $self->cr;
+    }
+
+    for my $xobject (sort keys %{$self->{'xobjects'}}) {
+        debug( 2, "add_pages(): xobject: $xobject" );
+        $self->{'xobj'}{$xobject} = $self->reserve('XObject');
+        $self->add_object( $self->indirect_obj( $self->stream( %{ $self->{'xobjects'}{$xobject} } ), 'XObject' ) );
+        $self->cr;
+
+        if ( defined $self->{'reservations'}{"ImageColorSpace$xobject"}) {
+            $self->add_object(
+                $self->indirect_obj( $self->stream( %{ $self->{'xobjects_colorspace'}{$xobject} } ), "ImageColorSpace$xobject" ) );
+            $self->cr;
+        }
+    }
+
+    for my $annotation (sort keys %{$self->{'annotations'}}) {
+        $self->{'annot'}{$annotation}{'object_info'} = $self->reserve('Annotation');
+        $self->add_object( $self->indirect_obj( $self->dictionary( %{ $self->{'annotations'}{$annotation} } ), 'Annotation' ) );
+        $self->cr;
+    }
+
+    for my $page ($self->{'pages'}->list) {
+        my $name = $page->{'name'};
+        debug( 2, "add_pages: page: $name" );
+        my $type = 'Page' . ( defined $page->{'Kids'} && scalar @{ $page->{'Kids'} } ? 's' : '' );
+
+        # Type (required)
+        my $content = { 'Type' => $self->name($type) };
+
+        # Resources (required, may be inherited). See page 195.
+        my $resources = {};
+        for my $k ( keys %{ $page->{'resources'} } ) {
+            my $v = $page->{'resources'}{$k};
+            ( $k eq 'ProcSet' ) && do {
+                my $l = [];
+                if ( ref($v) eq 'ARRAY' ) {
+                    map { push @$l, $self->name($_) } @$v;
+                } else {
+                    push @$l, $self->name($v);
+                }
+                $$resources{'ProcSet'} = $self->array(@$l);
+            }
+            || ( $k eq 'fonts' ) && do {
+                my $l = {};
+                map { $$l{"F$_"} = $self->indirect_ref( @{ $self->{'fontobj'}{$_} } ); } keys %{ $page->{'resources'}{'fonts'} };
+                $$resources{'Font'} = $self->dictionary(%$l);
+            }
+            || ( $k eq 'xobjects' ) && do {
+                my $l = {};
+                map { $$l{"Image$_"} = $self->indirect_ref( @{ $self->{'xobj'}{$_} } ); }
+                keys %{ $page->{'resources'}{'xobjects'} };
+                $$resources{'XObject'} = $self->dictionary(%$l);
+            };
+        }
+        if ( defined( $$resources{'Annotation'} ) ) {
+            my $r = $self->add_object( $self->indirect_obj( $self->dictionary(%$resources) ) );
+            $self->cr;
+            $$content{'Resources'} = [ 'ref', [ $$r[0], $$r[1] ] ];
+        }
+        if ( defined( $$resources{'XObject'} ) ) {
+            my $r = $self->add_object( $self->indirect_obj( $self->dictionary(%$resources) ) );
+            $self->cr;
+            $$content{'Resources'} = [ 'ref', [ $$r[0], $$r[1] ] ];
+        } else {
+            $$content{'Resources'} = $self->dictionary(%$resources)
+                if scalar keys %$resources;
+        }
+        for my $K ( 'MediaBox', 'CropBox', 'ArtBox', 'TrimBox', 'BleedBox' ) {
+            my $k = lc $K;
+            if ( defined $page->{$k} ) {
+                my $l = [];
+                map { push @$l, $self->number($_) } @{ $page->{$k} };
+                $$content{$K} = $self->array(@$l);
+            }
+        }
+        $$content{'Rotate'} = $self->number( $page->{'rotate'} ) if defined $page->{'rotate'};
+        if ( $type eq 'Page' ) {
+            $$content{'Parent'} = $self->indirect_ref( @{ $page->{'Parent'}{'id'} } );
+
+            # Content
+            if ( defined $page->{'contents'} ) {
+                my $contents = [];
+                map { push @$contents, $self->indirect_ref(@$_); } @{ $page->{'contents'} };
+                $$content{'Contents'} = $self->array(@$contents);
+            }
+
+            # Annotations added here by Gary Lieberman
+            #
+            # Tell the /Page object that annotations need to be drawn.
+            if ( defined $self->{'annot'} ) {
+                my $Annots    = '[ ';
+                my $is_annots = 0;
+                foreach my $annot_number ( keys %{ $self->{'annot'} } ) {
+                    next if ( $self->{'annot'}{$annot_number}{'page_name'} ne $name );
+                    $is_annots = 1;
+                    debug( 2,
+                           sprintf "annotation number:  $annot_number, page name: $self->{'annot'}{$annot_number}{'page_name'}" );
+                    my $object_number     = $self->{'annot'}{$annot_number}{'object_info'}[0];
+                    my $generation_number = $self->{'annot'}{$annot_number}{'object_info'}[1];
+                    debug( 2, sprintf "object_number: $object_number, generation_number: $generation_number" );
+                    $Annots .= sprintf( "%s %s R ", $object_number, $generation_number );
+                }
+                $$content{'Annots'} = $self->verbatim( $Annots . ']' ) if ($is_annots);
+            }
+        } else {
+            my $kids = [];
+            map { push @$kids, $self->indirect_ref(@$_) } @{ $page->kids };
+            $$content{'Kids'}   = $self->array(@$kids);
+            $$content{'Parent'} = $self->indirect_ref( @{ $page->{'Parent'}{'id'} } )
+                if defined $page->{'Parent'};
+            $$content{'Count'} = $self->number( $page->count );
+        }
+        $self->add_object( $self->indirect_obj( $self->dictionary(%$content), $name ) );
+        $self->cr;
+    }
 }
 
 sub add_crossrefsection {
@@ -1503,6 +1510,8 @@ Fabien Tassin
 GIF and JPEG-support: Michael Gross (info@mdgrosse.net)
 
 Maintenance since 2007: Markus Baertschi (markus@markus.org)
+
+Currently maintained by Mohammad S Anwar (MANWAR) << <mohammad.anwar@yahoo.com> >>
 
 =head1 REPOSITORY
 
