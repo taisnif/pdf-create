@@ -1,5 +1,10 @@
 Revision history for PDF::Create
 
+1.24  2015-12-14 11:35:00 MANWAR
+      - Documented method version().
+      - Added check for version number.
+      - Added unit test for method version().
+
 1.23  2015-12-05 12:40:00 MANWAR
       - Added parameter validation check for method new_outline().
 

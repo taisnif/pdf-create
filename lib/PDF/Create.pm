@@ -1,6 +1,6 @@
 package PDF::Create;
 
-our $VERSION = '1.23';
+our $VERSION = '1.24';
 
 =head1 NAME
 
@@ -8,7 +8,7 @@ PDF::Create - Create PDF files.
 
 =head1 VERSION
 
-Version 1.23
+Version 1.24
 
 =cut
 
@@ -518,6 +518,23 @@ sub get_page_size {
     }
 
     return $pagesizes{$name};
+}
+
+=head2 version($number)
+
+Set and return version number. Valid version numbers are 1.0, 1.1, 1.2 and 1.3.
+
+=cut
+
+sub version {
+    my ($self, $v) = @_;
+
+    if (defined $v) {
+        croak "ERROR: Invalid version number $v received.\n"
+            unless ($v =~ /^1\.[0,1,2,3]$/);
+        $self->{'version'} = $v;
+    }
+    $self->{'version'};
 }
 
 =head2 close(%params)
@@ -1152,16 +1169,6 @@ sub debug {
     my $s = scalar @_ ? sprintf $msg, @_ : $msg;
 
     warn "DEBUG ($level): $s\n";
-}
-
-sub version {
-    my ($self, $v) = @_;
-
-    if (defined $v) {
-        # TODO: should test version (1.0 to 1.3)
-        $self->{'version'} = $v;
-    }
-    $self->{'version'};
 }
 
 sub add {

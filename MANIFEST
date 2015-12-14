@@ -25,6 +25,7 @@ t/09-cgi-script.pl
 t/09-cgi.t
 t/10-generic.t
 t/11-encode.t
+t/12-version.t
 t/50-versioning.t
 t/51-memory-leak.t
 t/99-wifi-parabola.t
