@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+
+use v5.8;
+use warnings;
+use strict;
+use autodie;
+use utf8;
+
+use PDF::Create;
+
+my @all_fonts = qw(
+  Courier
+  Courier-Bold
+  Courier-BoldOblique
+  Courier-Oblique
+  Helvetica
+  Helvetica-Bold
+  Helvetica-BoldOblique
+  Helvetica-Oblique
+  Times-Bold
+  Times-BoldItalic
+  Times-Italic
+  Times-Roman
+);
+
+my $pdf = PDF::Create->new(
+  'filename'     => 'sample.pdf',
+  'Author'       => 'John Doe',
+  'Title'        => 'Sample PDF',
+  'CreationDate' => [ localtime ]
+);
+
+my $root = $pdf->new_page('MediaBox' => [369, 99] );
+#my $root = $pdf->new_page('MediaBox' => [595, 842] );
+
+my $page;
+my $font;
+my $fontsize = 14;
+my $first  = &broaden('ÄÖÜäöüß', 5);
+my $second = &broaden('AOUaouT', 5);
+
+for my $fontname (@all_fonts) {
+  $page = $root->new_page;
+  $font = $pdf->font('BaseFont' => $fontname);
+  $page->string($font, $fontsize, 5, 5, $fontname);
+  $page->string($font, $fontsize, 5, 82, $first);
+  $page->string($font, $fontsize, 5, 82-1*$fontsize, $second);
+  $page->stringc($font, $fontsize, 185, 82-10-2*$fontsize, $first);
+  $page->stringc($font, $fontsize, 185, 82-10-3*$fontsize, $second);
+}
+
+$pdf->close;
+
+sub broaden {
+  my ($str, $count) = @_;
+  my @tmp = split('', $str);
+  my $out = '';
+  for (@tmp) {
+    $out .= $_ x $count;
+  }
+  return $out;
+}
