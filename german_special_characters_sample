@@ -6,21 +6,30 @@ use strict;
 use autodie;
 use utf8;
 
+# standard io - encoding
+use open ':std', ':encoding(UTF-8)';
+use open IO => ':encoding(utf8)';   # Encoding used by files
+
 use PDF::Create;
 
-my @all_fonts = qw(
-  Courier
-  Courier-Bold
-  Courier-BoldOblique
-  Courier-Oblique
-  Helvetica
-  Helvetica-Bold
-  Helvetica-BoldOblique
-  Helvetica-Oblique
-  Times-Bold
-  Times-BoldItalic
-  Times-Italic
-  Times-Roman
+open (my $todo_fh, '>', 'TODO.txt');
+close $todo_fh;
+
+my $german_special  = 'ÄÖÜäöüß';
+
+my %font_replacement = (
+  'Courier'               => 'AOUaouT',
+  'Courier-Bold'          => 'AOUaouT',
+  'Courier-BoldOblique'   => 'AOUaouT',
+  'Courier-Oblique'       => 'AOUaouT',
+  'Helvetica'             => 'AOUaouT',
+  'Helvetica-Bold'        => 'AOUaouT',
+  'Helvetica-BoldOblique' => 'AOUaouT',
+  'Helvetica-Oblique'     => 'AOUaouT',
+  'Times-Bold'            => 'AOUaouq', #OK
+  'Times-BoldItalic'      => 'AOUaoux', #OK
+  'Times-Italic'          => 'AOUaou#', #OK
+  'Times-Roman'           => 'AOUaoux', #OK
 );
 
 my $pdf = PDF::Create->new(
@@ -30,29 +39,76 @@ my $pdf = PDF::Create->new(
   'CreationDate' => [ localtime ]
 );
 
-my $root = $pdf->new_page('MediaBox' => [369, 99] );
+my $root = $pdf->new_page('MediaBox' => $pdf->get_page_size('A4l') );
 #my $root = $pdf->new_page('MediaBox' => [595, 842] );
 
 my $page;
 my $font;
-my $fontsize = 14;
-my $first  = &broaden('ÄÖÜäöüß', 5);
-my $second = &broaden('AOUaouT', 5);
+my $fontsize = 22;
+my $repeat_chars = 8;
 
-for my $fontname (@all_fonts) {
+my $str_special  = &broaden($german_special, $repeat_chars);
+
+
+for (sort keys %font_replacement) {
   $page = $root->new_page;
-  $font = $pdf->font('BaseFont' => $fontname);
-  $page->string($font, $fontsize, 5, 5, $fontname);
-  $page->string($font, $fontsize, 5, 82, $first);
-  $page->string($font, $fontsize, 5, 82-1*$fontsize, $second);
-  $page->stringc($font, $fontsize, 185, 82-10-2*$fontsize, $first);
-  $page->stringc($font, $fontsize, 185, 82-10-3*$fontsize, $second);
+  $font = $pdf->font('BaseFont' => $_);
+  my $rep = &broaden($font_replacement{$_}, $repeat_chars);
+  &print_result($_, $rep);
+  $page->stringc($font, $fontsize, 421, 350, $_);
+  $page->string($font, $fontsize, 5, 500, $str_special);
+  $page->string($font, $fontsize, 5, 500-1*$fontsize, $rep);
+  $page->stringc($font, $fontsize, 421, 500-10-2*$fontsize, $str_special);
+  $page->stringc($font, $fontsize, 421, 500-10-3*$fontsize, $rep);
 }
 
 $pdf->close;
 
+sub print_result {
+  my ($fontname, $replacement) = @_;
+  my @special = split( '', $german_special);
+  my @rep = split( '', $replacement);
+  my $nochange = [ ];
+  my $change = [ ];
+  for my $i (0 .. $#special) {
+    my $sp_w    = $page->string_width($font, $special[$i]);
+    my $rep_w   = $page->string_width($font, $rep[$i]);
+    my $sp_ord  = ord($special[$i]);
+    #my $rep_ord = ord($rep[$i]);
+    if ($sp_w == $rep_w) {
+      push @$nochange, {
+        font  => $fontname,
+        char  => $special[$i],
+        width => $sp_w,
+        ord   => $sp_ord,
+      };
+    } else {
+      push @$change, {
+        font      => $fontname,
+        char  => $special[$i],
+        sp_width  => $sp_w,
+        rep_width => $rep_w,
+        ord       => $sp_ord,
+      };
+    }
+  }
+  open (my $todo_fh, '>>', 'TODO.txt');
+  print "\nReults for: $fontname\n";
+  print "No change necessary for:\n";
+  for (@{$nochange}) {
+    print "'$_->{char}' (ord $_->{ord}): width $_->{width}\n";
+  }
+  print "---\nChange:\n";
+  for (@{$change}) {
+    print "'$_->{char}' (ord $_->{ord}): from $_->{sp_width} to $_->{rep_width}\n";
+    print $todo_fh "$_->{font} '$_->{char}' (ord $_->{ord}): Change width from $_->{sp_width} to $_->{rep_width}\n";
+  }
+  close $todo_fh;
+}
+
+
 sub broaden {
-  my ($str, $count) = @_;
+  my ($str, $count) = (@_);
   my @tmp = split('', $str);
   my $out = '';
   for (@tmp) {
