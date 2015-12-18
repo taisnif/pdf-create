@@ -53,13 +53,13 @@ my $str_special  = &broaden($german_special, $repeat_chars);
 for (sort keys %font_replacement) {
   $page = $root->new_page;
   $font = $pdf->font('BaseFont' => $_);
-  my $rep = &broaden($font_replacement{$_}, $repeat_chars);
-  &print_result($_, $rep);
+  my $str_rep = &broaden($font_replacement{$_}, $repeat_chars);
+  &print_result($_, $font_replacement{$_});
   $page->stringc($font, $fontsize, 421, 350, $_);
   $page->string($font, $fontsize, 5, 500, $str_special);
-  $page->string($font, $fontsize, 5, 500-1*$fontsize, $rep);
+  $page->string($font, $fontsize, 5, 500-1*$fontsize, $str_rep);
   $page->stringc($font, $fontsize, 421, 500-10-2*$fontsize, $str_special);
-  $page->stringc($font, $fontsize, 421, 500-10-3*$fontsize, $rep);
+  $page->stringc($font, $fontsize, 421, 500-10-3*$fontsize, $str_rep);
 }
 
 $pdf->close;
@@ -71,8 +71,8 @@ sub print_result {
   my $nochange = [ ];
   my $change = [ ];
   for my $i (0 .. $#special) {
-    my $sp_w    = $page->string_width($font, $special[$i]);
-    my $rep_w   = $page->string_width($font, $rep[$i]);
+    my $sp_w    = 1000 * $page->string_width($font, $special[$i]);
+    my $rep_w   = 1000 * $page->string_width($font, $rep[$i]);
     my $sp_ord  = ord($special[$i]);
     #my $rep_ord = ord($rep[$i]);
     if ($sp_w == $rep_w) {
@@ -108,7 +108,7 @@ sub print_result {
 
 
 sub broaden {
-  my ($str, $count) = (@_);
+  my ($str, $count) = @_;
   my @tmp = split('', $str);
   my $out = '';
   for (@tmp) {
