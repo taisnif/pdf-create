@@ -11,7 +11,7 @@
 
 use strict; use warnings;
 use PDF::Create;
-use Test::More tests => 32;
+use Test::More tests => 34;
 
 # we want the resulting pdf file to have the same name as the test
 my $pdfname = $0;
@@ -63,6 +63,7 @@ $font{'Helvetica'}             = define_font('Helvetica');
 $font{'Helvetica-Bold'}        = define_font('Helvetica-Bold');
 $font{'Helvetica-Oblique'}     = define_font('Helvetica-Oblique');
 $font{'Helvetica-BoldOblique'} = define_font('Helvetica-BoldOblique');
+$font{'Symbol'}                = define_font('Symbol', undef, 'Symbol');
 $font{'Times-Roman'}           = define_font('Times-Roman');
 $font{'Times-Bold'}            = define_font('Times-Bold');
 $font{'Times-Italic'}          = define_font('Times-Italic');
