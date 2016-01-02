@@ -1,5 +1,8 @@
 Revision history for PDF::Create
 
+1.25  2016-01-02 01:05:00 MANWAR
+      - Merged GitHub Pull Request #8 from TAISNIF.
+
 1.24  2015-12-14 11:35:00 MANWAR
       - Documented method version().
       - Added check for version number.
