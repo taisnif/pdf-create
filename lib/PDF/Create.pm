@@ -367,17 +367,17 @@ listed below:
     |          |                                                                |
     | Encoding | Specifies the  encoding  from which the new encoding differs.  |
     |          | It must be one of the predefined encodings MacRomanEncoding,   |
-    |          | MacExpertEncoding or WinAnsiEncoding. In this version, only    |
-    |          | WinAnsiEncoding is supported. This is the default value.       |
+    |          | MacExpertEncoding, Symbol or WinAnsiEncoding. The default      |
+    |          | value is WinAnsiEncoding.                                      |
     |          |                                                                |
     | BaseFont | The PostScript name of the font. It can be one of the following|
     |          | base fonts: Courier, Courier-Bold, Courier-BoldOblique,        |
     |          | Courier-Oblique, Helvetica, Helvetica-Bold,                    |
     |          | Helvetica-BoldOblique, Helvetica-Oblique, Times-Roman,         |
-    |          | Times-Bold, Times-Italic or Times-BoldItalic.                  |
+    |          | Times-Bold, Times-Italic, Times-BoldItalic or Symbol.          |
     +----------+----------------------------------------------------------------+
 
-The Symbol or  ZapfDingbats  fonts are not supported in this version. The default
+The ZapfDingbats font is not supported in this version. The default
 font is Helvetica.
 
     my $f1 = $pdf->font('BaseFont' => 'Helvetica');
@@ -389,10 +389,10 @@ sub font {
 
     my %valid_font_parameters = (
         'Subtype'  => { map { $_ => 1 } qw/Type0 Type1 Type3 TrueType/ },
-        'Encoding' => { map { $_ => 1 } qw/MacRomanEncoding MacExpertEncoding WinAnsiEncoding/ },
+        'Encoding' => { map { $_ => 1 } qw/MacRomanEncoding MacExpertEncoding WinAnsiEncoding Symbol/ },
         'BaseFont' => { map { $_ => 1 } qw/Courier Courier-Bold Courier-BoldOblique Courier-Oblique
                                            Helvetica Helvetica-Bold Helvetica-BoldOblique Helvetica-Oblique
-                                           Times-Roman Times-Bold Times-Italic Times-BoldItalic/ },
+                                           Times-Roman Times-Bold Times-Italic Times-BoldItalic Symbol/ },
         );
     foreach my $key (keys %params) {
         croak "PDF::Create.pm - font(): Received invalid key [$key]"
