@@ -8,3 +8,5 @@ PDF-Create-*
 Build
 _build/
 MANIFEST.bak
+/afm-files/
+/sample.pdf
