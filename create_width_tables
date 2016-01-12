@@ -1,0 +1,232 @@
+#!/usr/bin/perl
+
+# perl oneliner introduced by slaven
+#m{^C +(\d+) +; +WX +(\d+)} and $wx{$1}=$2; \
+#END { for my $ch (0..255) { print (($wx{$ch} || $wx{32}), ", ")}}
+
+use v5.8;
+use warnings;
+use strict;
+use autodie;
+use utf8;
+
+# standard io - encoding
+use open ':std', ':encoding(UTF-8)';
+use open IO => ':encoding(utf8)';   # Encoding used by files
+
+use PDF::Create;
+use Encode qw(decode encode);
+#use Data::Dumper;
+#
+
+# Texlive adobe fonts currently not supported by pdf-create:
+# ##########################################################
+#
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/ncntrsbk/pncri8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/ncntrsbk/pncbi8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/ncntrsbk/pncr8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/ncntrsbk/pncb8a.afm
+# 
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/zapfding/pzdr.afm
+# 
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/palatino/pplb8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/palatino/pplbi8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/palatino/pplr8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/palatino/pplri8a.afm
+# 
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvr8an.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvro8an.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvb8an.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvbo8an.afm
+# 
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/bookman/pbkd8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/bookman/pbkli8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/bookman/pbkl8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/bookman/pbkdi8a.afm
+# 
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/zapfchan/pzcmi8a.afm
+# 
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/avantgar/pagko8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/avantgar/pagd8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/avantgar/pagdo8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/avantgar/pagk8a.afm
+# 
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/utopia/putr8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/utopia/putri8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/utopia/putbi8a.afm
+# /usr/share/texlive/texmf-dist/fonts/afm/adobe/utopia/putb8a.afm
+
+#/usr/share/texlive/texmf-dist/fonts/afm/adobe/symbol/psyb.afm
+
+
+
+# Prepare usage of Module Font::AFM with the
+# Adobe font metrics of tex-live
+# ##########################################
+#
+my %afm_file = (
+  #'Courier'               => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/courier/pcrr8a.afm',
+  #'Courier-Bold'          => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/courier/pcrb8a.afm',
+  #'Courier-BoldOblique'   => /usr/share/texlive/texmf-dist/fonts/afm/adobe/courier/pcrbo8a.afm',
+  #'Courier-Oblique'       => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/courier/pcrro8a.afm',
+  'Helvetica'             => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvr8a.afm',
+  'Helvetica-Bold'        => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvb8a.afm',
+  'Helvetica-BoldOblique' => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvbo8a.afm',
+  'Helvetica-Oblique'     => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/helvetic/phvro8a.afm',
+  'Times-Bold'            => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/times/ptmb8a.afm',
+  'Times-BoldItalic'      => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/times/ptmbi8a.afm',
+  'Times-Italic'          => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/times/ptmri8a.afm',
+  'Times-Roman'           => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/times/ptmr8a.afm',
+  'Symbol'                => '/usr/share/texlive/texmf-dist/fonts/afm/adobe/symbol/psyr.afm',
+);
+
+# Path for Font::AFM to look for afm-files
+$ENV{'METRICS'} = './afm-files'; 
+
+#Create symbolic links to the adobe afm files for Font::AFM
+unless ( -d $ENV{'METRICS'} ) {
+  mkdir $ENV{'METRICS'};
+  for (sort keys %afm_file) {
+    symlink $afm_file{$_}, "$ENV{METRICS}/$_.afm";
+  }
+}
+
+require Font::AFM;
+Font::AFM->import;
+
+
+
+
+my $german_special  = 'ÄÖÜäöüß';
+
+my %font_replacement = (
+  #'Courier'               => 'AOUaouT',
+  #'Courier-Bold'          => 'AOUaouT',
+  #'Courier-BoldOblique'   => 'AOUaouT',
+  #'Courier-Oblique'       => 'AOUaouT',
+  'Helvetica'             => 'AOUaouT',
+  'Helvetica-Bold'        => 'AOUaouT',
+  'Helvetica-BoldOblique' => 'AOUaouT',
+  'Helvetica-Oblique'     => 'AOUaouT',
+  'Times-Bold'            => 'AOUaouq',
+  'Times-BoldItalic'      => 'AOUaoux',
+  'Times-Italic'          => 'AOUaou#',
+  'Times-Roman'           => 'AOUaoux',
+  'Symbol'                => '???????', # No replacement applicable?
+);
+
+
+# Create pdf file of german umlauts compared to characters
+# of the same width for all enabled fonts (see %font_replacement)
+sub create_sample_pdf {
+  my $pdf = PDF::Create->new(
+    'filename'     => 'sample.pdf',
+    'Author'       => 'John Doe',
+    'Title'        => 'Sample PDF',
+    'CreationDate' => [ localtime ]
+  );
+
+  my $root = $pdf->new_page('MediaBox' => $pdf->get_page_size('A4l'));
+
+  my $page;
+  my $font;
+  my $fontsize = 22;
+  my $repeat_chars = 8;
+
+  my $str_special  = &broaden($german_special, $repeat_chars);
+
+
+  for (sort keys %font_replacement) {
+    $page = $root->new_page;
+    $font = $pdf->font('BaseFont' => $_);
+    my $str_rep = &broaden($font_replacement{$_}, $repeat_chars);
+    #&print_result($_, $font_replacement{$_}, $page, $font);
+    $page->stringc($font, $fontsize, 421, 350, $_);
+    $page->string($font, $fontsize, 5, 500, $str_special);
+    $page->string($font, $fontsize, 5, 500-1*$fontsize, $str_rep);
+    $page->stringc($font, $fontsize, 421, 500-10-2*$fontsize, $str_special);
+    $page->stringc($font, $fontsize, 421, 500-10-3*$fontsize, $str_rep);
+  }
+
+  $pdf->close;
+}
+
+sub print_result {
+  my ($fontname, $replacement, $page, $font) = @_;
+  my @special = split( '', $german_special);
+  my @rep = split( '', $replacement);
+  my $nochange = [ ];
+  my $change = [ ];
+  for my $i (0 .. $#special) {
+    my $sp_w    = 1000 * $page->string_width($font, $special[$i]);
+    my $rep_w   = 1000 * $page->string_width($font, $rep[$i]);
+    my $sp_ord  = ord($special[$i]);
+    #my $rep_ord = ord($rep[$i]);
+    if ($sp_w == $rep_w) {
+      push @$nochange, {
+        font  => $fontname,
+        char  => $special[$i],
+        width => $sp_w,
+        ord   => $sp_ord,
+      };
+    } else {
+      push @$change, {
+        font      => $fontname,
+        char  => $special[$i],
+        sp_width  => $sp_w,
+        rep_width => $rep_w,
+        ord       => $sp_ord,
+      };
+    }
+  }
+  open (my $todo_fh, '>>', 'TODO.txt');
+  print "\nReults for: $fontname\n";
+  print "No change necessary for:\n";
+  for (@{$nochange}) {
+    print "'$_->{char}' (ord $_->{ord}): width $_->{width}\n";
+  }
+  print "---\nChange:\n";
+  for (@{$change}) {
+    print "'$_->{char}' (ord $_->{ord}): from $_->{sp_width} to $_->{rep_width}\n";
+    print $todo_fh "$_->{font} '$_->{char}' (ord $_->{ord}): Change width from $_->{sp_width} to $_->{rep_width}\n";
+  }
+  close $todo_fh;
+}
+
+sub broaden {
+  my ($str, $count) = @_;
+  my @tmp = split('', $str);
+  my $out = '';
+  for (@tmp) {
+    $out .= $_ x $count;
+  }
+  return $out;
+}
+
+#&create_sample_pdf;
+
+my $afm = new Font::AFM "Helvetica";
+my $copyright = $afm->Notice;
+print "copyright: " . $copyright . "\n";
+print "\n";
+
+# Output latin-1 width table
+my @widths = $afm->latin1_wx_table();
+my $a = join( ", ", @widths );
+print $a . ", \n";
+
+# Output with table for perl internal ord value
+print "perl widths:\n";
+my $byte_str = pack("C*", 0..255);
+my @byte_sequence = split( //, $byte_str );
+my @latin1_characters = split(
+  //, decode("iso-8859-1", $byte_str)
+);
+my @perl_widths = ();
+for my $i (0..$#byte_sequence) {
+  my $ord = ord $latin1_characters[$i];
+  $perl_widths[$ord] = $afm->stringwidth($byte_sequence[$i]);
+}
+my $b = join( ", ", @perl_widths );
+print $b . ", \n";
+
